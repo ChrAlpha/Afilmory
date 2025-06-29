@@ -1,4 +1,6 @@
+import { photoLoader } from '@afilmory/data'
 import { m } from 'motion/react'
+import { useEffect, useMemo, useState } from 'react'
 import { MapProvider } from 'react-map-gl/mapbox'
 
 import {
@@ -7,19 +9,64 @@ import {
   MapLoadingState,
 } from '~/components/ui/map'
 import {
-  useMapBounds,
-  useMapMarkerSelection,
-  usePhotoMarkers,
-} from '~/hooks/map'
+  calculateMapBounds,
+  convertPhotosToMarkersFromEXIF,
+  getInitialViewStateForMarkers,
+} from '~/lib/map-utils'
+import type { PhotoMarker } from '~/types/map'
 
 import { MapboxContainer } from './MapboxContainer'
 
 export const MapSection = () => {
-  // Use hooks for map functionality
-  const { markers, isLoading, error } = usePhotoMarkers()
-  const { selectedMarker, selectMarker, clearSelection } =
-    useMapMarkerSelection()
-  const { bounds, initialViewState } = useMapBounds(markers)
+  // Photo markers state and loading logic
+  const [markers, setMarkers] = useState<PhotoMarker[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<Error | null>(null)
+
+  // Map marker selection state
+  const [selectedMarker, setSelectedMarker] = useState<PhotoMarker | null>(null)
+
+  // Load photo markers effect
+  useEffect(() => {
+    const loadPhotoMarkersData = async () => {
+      setIsLoading(true)
+      setError(null)
+
+      try {
+        const photos = photoLoader.getPhotos()
+        const photoMarkers = convertPhotosToMarkersFromEXIF(photos)
+
+        setMarkers(photoMarkers)
+        console.info(`Found ${photoMarkers.length} photos with GPS coordinates`)
+      } catch (err) {
+        const error =
+          err instanceof Error ? err : new Error('Failed to load photo markers')
+        setError(error)
+        console.error('Failed to load photo markers:', error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    loadPhotoMarkersData()
+  }, [])
+
+  // Map bounds and initial view state
+  const bounds = useMemo(() => calculateMapBounds(markers), [markers])
+  const initialViewState = useMemo(
+    () => getInitialViewStateForMarkers(markers),
+    [markers],
+  )
+
+  // Marker selection handlers
+  const selectMarker = (marker: PhotoMarker) => {
+    setSelectedMarker(marker)
+    console.info('Selected photo:', marker.photo.title || marker.photo.id)
+  }
+
+  const clearSelection = () => {
+    setSelectedMarker(null)
+  }
 
   // Show loading state
   if (isLoading) {
