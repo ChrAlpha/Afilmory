@@ -82,7 +82,7 @@ export const ExifPanel: FC<{
 
       <ScrollArea
         rootClassName="flex-1 min-h-0 overflow-auto lg:overflow-hidden"
-        viewportClassName="px-4 pb-4"
+        viewportClassName="px-4 pb-4 [&_*]:select-text"
       >
         <div className={`space-y-${isMobile ? '3' : '4'}`}>
           {/* 基本信息和标签 - 合并到一个 section */}
@@ -285,7 +285,7 @@ export const ExifPanel: FC<{
                   <div className="mb-2 text-xs font-medium text-white/70">
                     {t('exif.histogram')}
                   </div>
-                  <HistogramChart toneAnalysis={currentPhoto.toneAnalysis} />
+                  <HistogramChart thumbnailUrl={currentPhoto.thumbnailUrl} />
                 </div>
               </div>
             </div>
