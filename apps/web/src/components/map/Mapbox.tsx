@@ -9,7 +9,7 @@ import type { GeocoderOptions } from '@mapbox/mapbox-gl-geocoder'
 import MapboxGeocoder from '@mapbox/mapbox-gl-geocoder'
 import * as mapboxgl from 'mapbox-gl'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { LayerProps, MapRef } from 'react-map-gl'
+import type { LayerProps, MapRef } from 'react-map-gl/mapbox'
 import Map, {
   GeolocateControl,
   Layer,
@@ -17,9 +17,9 @@ import Map, {
   NavigationControl,
   Popup,
   Source,
-} from 'react-map-gl'
+} from 'react-map-gl/mapbox'
 
-import { useIsDark } from '~/hooks/common/useDark'
+// import { useIsDark } from '~/hooks/common/useDark'
 
 export interface PhotoMarker {
   id: string
@@ -74,7 +74,7 @@ const Mapbox = ({
   style = DEFAULT_STYLE,
 }: MapboxProps) => {
   const mapRef = useRef<MapRef>(null)
-  const isDark = useIsDark()
+  // const isDark = useIsDark()
   const [popupInfo, setPopupInfo] = useState<{
     marker: PhotoMarker
     longitude: number
@@ -179,7 +179,8 @@ const Mapbox = ({
         mapboxAccessToken={MAPBOX_TOKEN}
         initialViewState={initialViewState}
         style={{ width: '100%', height: '100%' }}
-        mapStyle={MAP_STYLES[isDark ? 'dark' : 'light']}
+        // mapStyle={MAP_STYLES[isDark ? 'dark' : 'light']}
+        mapStyle={MAP_STYLES['dark']}
         interactiveLayerIds={geoJsonData ? ['data'] : undefined}
         onClick={onClick}
       >

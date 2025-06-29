@@ -102,15 +102,19 @@ const useSyncStateToUrl = () => {
     if (!isRestored) return
 
     if (!isOpen) {
-      const timer = setTimeout(() => {
-        navigate('/')
-      }, 500)
-      return () => clearTimeout(timer)
-    }
-    const photos = photoLoader.getPhotos()
-    const targetPathname = `/${photos[currentIndex].id}`
-    if (location.pathname !== targetPathname) {
-      navigate(targetPathname)
+      const isExploryPath = location.pathname === '/explory'
+      if (!isExploryPath) {
+        const timer = setTimeout(() => {
+          navigate('/')
+        }, 500)
+        return () => clearTimeout(timer)
+      }
+    } else {
+      const photos = photoLoader.getPhotos()
+      const targetPathname = `/${photos[currentIndex].id}`
+      if (location.pathname !== targetPathname) {
+        navigate(targetPathname)
+      }
     }
   }, [currentIndex, isOpen, location.pathname, navigate])
 
