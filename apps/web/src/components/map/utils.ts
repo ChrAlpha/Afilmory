@@ -1,8 +1,105 @@
 import type { PhotoManifestItem } from '@afilmory/builder'
 
-import { extractGPSFromPhoto, isValidGPSCoordinates } from '~/lib/gps'
+import { ExifToolManager } from '~/lib/exiftool'
 
 import type { PhotoMarker } from './Mapbox'
+
+// GPS coordinate validation function
+function isValidGPSCoordinates(
+  coords: { latitude: number; longitude: number } | null,
+): coords is { latitude: number; longitude: number } {
+  if (!coords) return false
+
+  const { latitude, longitude } = coords
+
+  return (
+    typeof latitude === 'number' &&
+    typeof longitude === 'number' &&
+    !Number.isNaN(latitude) &&
+    !Number.isNaN(longitude) &&
+    latitude >= -90 &&
+    latitude <= 90 &&
+    longitude >= -180 &&
+    longitude <= 180
+  )
+}
+
+// Extract GPS coordinates from photo using EXIF data
+async function extractGPSFromPhoto(
+  photoUrl: string,
+  _s3Key?: string,
+): Promise<{ latitude: number; longitude: number } | null> {
+  try {
+    // Fetch the image as a blob
+    const response = await fetch(photoUrl)
+    if (!response.ok) {
+      throw new Error(`Failed to fetch image: ${response.statusText}`)
+    }
+
+    const blob = await response.blob()
+
+    // Extract EXIF data using ExifToolManager
+    const metadata = await ExifToolManager.parse(blob)
+
+    if (!metadata || typeof metadata !== 'object') {
+      return null
+    }
+
+    // Type assertion for EXIF data structure
+    const exifData = metadata as any
+
+    if (!exifData.GPSLatitude || !exifData.GPSLongitude) {
+      return null
+    }
+
+    let latitude: number
+    let longitude: number
+
+    // Handle different coordinate formats
+    if (typeof exifData.GPSLatitude === 'string') {
+      latitude = Number.parseFloat(exifData.GPSLatitude)
+    } else {
+      latitude = Number(exifData.GPSLatitude)
+    }
+
+    if (typeof exifData.GPSLongitude === 'string') {
+      longitude = Number.parseFloat(exifData.GPSLongitude)
+    } else {
+      longitude = Number(exifData.GPSLongitude)
+    }
+
+    // Apply GPS reference directions
+    if (
+      exifData.GPSLatitudeRef === 'S' ||
+      exifData.GPSLatitudeRef === 'South'
+    ) {
+      latitude = -Math.abs(latitude)
+    } else {
+      latitude = Math.abs(latitude)
+    }
+
+    if (
+      exifData.GPSLongitudeRef === 'W' ||
+      exifData.GPSLongitudeRef === 'West'
+    ) {
+      longitude = -Math.abs(longitude)
+    } else {
+      longitude = Math.abs(longitude)
+    }
+
+    const coords = { latitude, longitude }
+
+    // Validate coordinates before returning
+    if (isValidGPSCoordinates(coords)) {
+      return coords
+    }
+
+    return null
+  } catch (error) {
+    console.warn('Failed to extract GPS coordinates:', error)
+    return null
+  }
+}
 
 /**
  * Convert PhotoManifestItem array to PhotoMarker array by extracting GPS coordinates
