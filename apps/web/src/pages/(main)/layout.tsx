@@ -1,6 +1,7 @@
 import { photoLoader } from '@afilmory/data'
 import { siteConfig } from '@config'
 import { useAtomValue, useSetAtom } from 'jotai'
+// import { AnimatePresence } from 'motion/react'
 import { useEffect, useRef } from 'react'
 import {
   Outlet,
@@ -21,6 +22,7 @@ export const Component = () => {
   useStateRestoreFromUrl()
   useSyncStateToUrl()
 
+  // const location = useLocation()
   const isMobile = useMobile()
 
   return (
@@ -52,6 +54,9 @@ export const Component = () => {
         </ScrollArea>
       )}
 
+      {/* <AnimatePresence mode="wait">
+        <Outlet key={location.pathname} />
+      </AnimatePresence> */}
       <Outlet />
     </>
   )
