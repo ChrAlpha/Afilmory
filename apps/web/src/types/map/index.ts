@@ -1,5 +1,7 @@
 import type { PhotoManifestItem } from '@afilmory/builder'
 
+export * from './provider'
+
 /**
  * Photo marker interface for map display
  */
@@ -42,7 +44,7 @@ export interface MapViewState {
 
 /**
  * Legacy Mapbox component props (deprecated)
- * @deprecated Use PureMapboxProps or MapboxContainerProps instead
+ * @deprecated Use BaseMapProps from provider interface instead
  */
 export interface MapboxProps {
   id?: string

@@ -1,3 +1,4 @@
+export * from './GenericMap'
 export * from './GeoJsonLayer'
 export * from './MapBackButton'
 export * from './Mapbox'

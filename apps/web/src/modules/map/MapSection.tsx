@@ -2,31 +2,38 @@ import { photoLoader } from '@afilmory/data'
 import { m } from 'motion/react'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { MapProvider } from 'react-map-gl/mapbox'
 
 import {
+  GenericMap,
   MapBackButton,
   MapInfoPanel,
   MapLoadingState,
 } from '~/components/ui/map'
+import { useMapData, useMapSelection } from '~/hooks/useMap'
 import {
-  calculateMapBounds,
   convertPhotosToMarkersFromEXIF,
   getInitialViewStateForMarkers,
 } from '~/lib/map-utils'
-import type { PhotoMarker } from '~/types/map'
-
-import { MapboxContainer } from './MapboxContainer'
+import { MapProvider } from '~/providers/map-provider'
 
 export const MapSection = () => {
+  return (
+    <MapProvider initialConfig={{ showGeocoder: true, theme: 'auto' }}>
+      <MapSectionContent />
+    </MapProvider>
+  )
+}
+
+const MapSectionContent = () => {
   const { t } = useTranslation()
+
   // Photo markers state and loading logic
-  const [markers, setMarkers] = useState<PhotoMarker[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
 
-  // Map marker selection state
-  const [selectedMarker, setSelectedMarker] = useState<PhotoMarker | null>(null)
+  // Use map context for data management
+  const { markers, setMarkers, bounds } = useMapData()
+  const { selectedMarker, selectMarker, clearSelection } = useMapSelection()
 
   // Load photo markers effect
   useEffect(() => {
@@ -51,24 +58,13 @@ export const MapSection = () => {
     }
 
     loadPhotoMarkersData()
-  }, [])
+  }, [setMarkers])
 
-  // Map bounds and initial view state
-  const bounds = useMemo(() => calculateMapBounds(markers), [markers])
+  // Initial view state calculation
   const initialViewState = useMemo(
     () => getInitialViewStateForMarkers(markers),
     [markers],
   )
-
-  // Marker selection handlers
-  const selectMarker = (marker: PhotoMarker) => {
-    setSelectedMarker(marker)
-    console.info('Selected photo:', marker.photo.title || marker.photo.id)
-  }
-
-  const clearSelection = () => {
-    setSelectedMarker(null)
-  }
 
   // Show loading state
   if (isLoading) {
@@ -93,35 +89,32 @@ export const MapSection = () => {
   }
 
   return (
-    <MapProvider>
-      <div className="relative h-full w-full">
-        {/* Back button */}
-        <MapBackButton />
+    <div className="relative h-full w-full">
+      {/* Back button */}
+      <MapBackButton />
 
-        {/* Map info panel */}
-        <MapInfoPanel
-          markersCount={markers.length}
-          bounds={bounds}
-          selectedMarker={selectedMarker}
-          onClearSelection={clearSelection}
-        />
+      {/* Map info panel */}
+      <MapInfoPanel
+        markersCount={markers.length}
+        bounds={bounds}
+        selectedMarker={selectedMarker}
+        onClearSelection={clearSelection}
+      />
 
-        {/* Mapbox component */}
-        <m.div
-          initial={{ opacity: 0, scale: 1.02 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.6, delay: 0.1 }}
+      {/* Generic Map component */}
+      <m.div
+        initial={{ opacity: 0, scale: 1.02 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.6, delay: 0.1 }}
+        className="h-full w-full"
+      >
+        <GenericMap
+          markers={markers}
+          initialViewState={initialViewState}
+          onMarkerClick={selectMarker}
           className="h-full w-full"
-        >
-          <MapboxContainer
-            markers={markers}
-            initialViewState={initialViewState}
-            onMarkerClick={selectMarker}
-            showGeocoder={true}
-            className="h-full w-full"
-          />
-        </m.div>
-      </div>
-    </MapProvider>
+        />
+      </m.div>
+    </div>
   )
 }
