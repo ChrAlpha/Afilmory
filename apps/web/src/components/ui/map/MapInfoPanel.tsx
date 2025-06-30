@@ -16,7 +16,7 @@ export const MapInfoPanel = ({
   selectedMarker,
   onClearSelection,
 }: MapInfoPanelProps) => {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
 
   return (
     <m.div
@@ -52,7 +52,9 @@ export const MapInfoPanel = ({
           <p className="text-xs text-gray-600 dark:text-gray-400">
             <span className="font-medium">{t('explory.shooting.range')}</span>
             <br />
-            {bounds.minLat.toFixed(2)}, {bounds.minLng.toFixed(2)} 至<br />
+            {bounds.minLat.toFixed(2)}, {bounds.minLng.toFixed(2)}{' '}
+            {t('explory.range.separator')}
+            <br />
             {bounds.maxLat.toFixed(2)}, {bounds.maxLng.toFixed(2)}
           </p>
         </m.div>
@@ -91,7 +93,7 @@ export const MapInfoPanel = ({
                     📅{' '}
                     {new Date(
                       selectedMarker.photo.exif.DateTimeOriginal,
-                    ).toLocaleDateString('zh-CN')}
+                    ).toLocaleDateString(i18n.language)}
                   </p>
                 )}
               </div>

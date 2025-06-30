@@ -1,6 +1,7 @@
 import { photoLoader } from '@afilmory/data'
 import { m } from 'motion/react'
 import { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { MapProvider } from 'react-map-gl/mapbox'
 
 import {
@@ -18,6 +19,7 @@ import type { PhotoMarker } from '~/types/map'
 import { MapboxContainer } from './MapboxContainer'
 
 export const MapSection = () => {
+  const { t } = useTranslation()
   // Photo markers state and loading logic
   const [markers, setMarkers] = useState<PhotoMarker[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -80,10 +82,10 @@ export const MapSection = () => {
         <div className="text-center">
           <div className="mb-4 text-4xl">❌</div>
           <div className="text-lg font-medium text-red-900 dark:text-red-100">
-            地图加载失败
+            {t('explory.map.error.title')}
           </div>
           <p className="text-sm text-red-600 dark:text-red-400">
-            请检查网络连接或刷新页面重试
+            {t('explory.map.error.description')}
           </p>
         </div>
       </div>
