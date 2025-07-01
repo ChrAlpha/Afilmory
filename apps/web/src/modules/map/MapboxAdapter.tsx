@@ -6,7 +6,6 @@ import type { MapRef } from 'react-map-gl/mapbox'
 
 import { Mapbox } from '~/components/ui/map/Mapbox'
 import { useIsDark } from '~/hooks/common'
-import { useMapContext, useMapSelection } from '~/hooks/useMap'
 import type { BaseMapProps, PhotoMarker } from '~/types/map'
 
 // You need to set VITE_MAPBOX_ACCESS_TOKEN in your environment variables
@@ -58,24 +57,22 @@ export const MapboxMapComponent: React.FC<BaseMapProps> = ({
   geoJsonData,
   className,
   style,
-  showGeocoder,
+  showGeocoder = true, // Default to true
   handlers,
 }) => {
   const mapRef = React.useRef<MapRef>(null)
   const isDark = useIsDark()
 
-  // Get configuration from Map Provider context
-  const { config } = useMapContext()
-  const { selectedMarker, clearSelection } = useMapSelection()
+  // Use simple theme logic
+  const theme = isDark ? 'dark' : 'light'
 
-  // Use config values with props as fallback
-  const effectiveShowGeocoder = showGeocoder ?? config.showGeocoder
-  const effectiveTheme =
-    config.theme === 'auto' ? (isDark ? 'dark' : 'light') : config.theme
+  // Default map config constants
+  const DEFAULT_ANIMATION_DURATION = 1000
+  const DEFAULT_ZOOM = 14
 
   // Add Geocoder control
   React.useEffect(() => {
-    if (!effectiveShowGeocoder || !mapRef.current || !MAPBOX_TOKEN) return
+    if (!showGeocoder || !mapRef.current || !MAPBOX_TOKEN) return
 
     const map = mapRef.current
     const geocoderOptions: GeocoderOptions = {
@@ -91,7 +88,7 @@ export const MapboxMapComponent: React.FC<BaseMapProps> = ({
         map.getMap().removeControl(geocoder)
       }
     }
-  }, [effectiveShowGeocoder])
+  }, [showGeocoder])
 
   // Handle GeoJSON click
   const handleGeoJsonClick = React.useCallback(
@@ -115,11 +112,11 @@ export const MapboxMapComponent: React.FC<BaseMapProps> = ({
     (longitude: number, latitude: number, zoom?: number) => {
       mapRef.current?.flyTo({
         center: [longitude, latitude],
-        duration: config.animationDuration,
-        zoom: zoom || config.defaultZoom,
+        duration: DEFAULT_ANIMATION_DURATION,
+        zoom: zoom || DEFAULT_ZOOM,
       })
     },
-    [config.animationDuration, config.defaultZoom],
+    [], // No dependencies needed as constants don't change
   )
 
   // Handle marker click
@@ -145,16 +142,14 @@ export const MapboxMapComponent: React.FC<BaseMapProps> = ({
       initialViewState={initialViewState}
       markers={markers}
       geoJsonData={geoJsonData}
-      selectedMarker={selectedMarker}
       onMarkerClick={handleMarkerClick}
-      onMarkerClose={clearSelection}
       onGeoJsonClick={handleGeoJsonClick}
       onGeolocate={handleGeolocate}
       className={className}
       style={style}
       mapboxToken={MAPBOX_TOKEN || ''}
       mapRef={mapRef}
-      theme={effectiveTheme}
+      theme={theme}
     />
   )
 }

@@ -3,6 +3,7 @@
 // Styles
 import 'mapbox-gl/dist/mapbox-gl.css'
 
+import { useState } from 'react'
 import Map from 'react-map-gl/mapbox'
 
 import type { PhotoMarker } from '~/types/map'
@@ -35,9 +36,7 @@ export interface PureMapboxProps {
   }
   markers?: PhotoMarker[]
   geoJsonData?: GeoJSON.FeatureCollection
-  selectedMarker?: PhotoMarker | null
   onMarkerClick?: (marker: PhotoMarker) => void
-  onMarkerClose?: () => void
   onGeoJsonClick?: (event: any) => void
   onGeolocate?: (longitude: number, latitude: number) => void
   className?: string
@@ -52,9 +51,7 @@ export const Mapbox = ({
   initialViewState = DEFAULT_VIEW_STATE,
   markers = DEFAULT_MARKERS,
   geoJsonData,
-  selectedMarker = null,
   onMarkerClick,
-  onMarkerClose,
   onGeoJsonClick,
   onGeolocate,
   className = 'w-full h-full',
@@ -63,20 +60,18 @@ export const Mapbox = ({
   mapRef,
   theme = 'dark',
 }: PureMapboxProps) => {
+  const [selectedMarkerId, setSelectedMarkerId] = useState<string | null>(null)
+
   // Handle marker click
   const handleMarkerClick = (marker: PhotoMarker) => {
-    // If clicking the already selected marker, deselect it
-    if (selectedMarker?.id === marker.id) {
-      onMarkerClose?.()
-    } else {
-      // Otherwise select the new marker
-      onMarkerClick?.(marker)
-    }
+    // Toggle selection: if already selected, deselect; otherwise select
+    setSelectedMarkerId((prev) => (prev === marker.id ? null : marker.id))
+    onMarkerClick?.(marker)
   }
 
   // Handle marker close
   const handleMarkerClose = () => {
-    onMarkerClose?.()
+    setSelectedMarkerId(null)
   }
   if (!mapboxToken) {
     return (
@@ -116,7 +111,7 @@ export const Mapbox = ({
           <PhotoMarkerPin
             key={marker.id}
             marker={marker}
-            isSelected={selectedMarker?.id === marker.id}
+            isSelected={selectedMarkerId === marker.id}
             onClick={handleMarkerClick}
             onClose={handleMarkerClose}
           />

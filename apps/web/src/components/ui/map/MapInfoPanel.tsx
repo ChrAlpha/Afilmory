@@ -1,22 +1,15 @@
-import { AnimatePresence, m } from 'motion/react'
+import { m } from 'motion/react'
 import { useTranslation } from 'react-i18next'
 
-import type { MapBounds, PhotoMarker } from '~/types/map'
+import type { MapBounds } from '~/types/map'
 
 interface MapInfoPanelProps {
   markersCount: number
   bounds: MapBounds | null
-  selectedMarker: PhotoMarker | null
-  onClearSelection: () => void
 }
 
-export const MapInfoPanel = ({
-  markersCount,
-  bounds,
-  selectedMarker,
-  onClearSelection,
-}: MapInfoPanelProps) => {
-  const { t, i18n } = useTranslation()
+export const MapInfoPanel = ({ markersCount, bounds }: MapInfoPanelProps) => {
+  const { t } = useTranslation()
 
   return (
     <m.div
@@ -59,55 +52,6 @@ export const MapInfoPanel = ({
           </p>
         </m.div>
       )}
-
-      {/* Selected photo info */}
-      <AnimatePresence>
-        {selectedMarker && (
-          <m.div
-            className="mt-3 rounded-lg border border-blue-200 bg-blue-50 p-3 dark:border-blue-800 dark:bg-blue-900/20"
-            initial={{ opacity: 0, y: 10, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -10, scale: 0.95 }}
-            transition={{ duration: 0.3 }}
-          >
-            <div className="flex items-start gap-2">
-              <img
-                src={
-                  selectedMarker.photo.thumbnailUrl ||
-                  selectedMarker.photo.originalUrl
-                }
-                alt={selectedMarker.photo.title || selectedMarker.photo.id}
-                className="h-12 w-12 rounded object-cover"
-                loading="lazy"
-              />
-              <div className="min-w-0 flex-1">
-                <h3 className="truncate text-sm font-medium text-blue-900 dark:text-blue-100">
-                  {selectedMarker.photo.title || selectedMarker.photo.id}
-                </h3>
-                <p className="text-xs text-blue-700 dark:text-blue-300">
-                  📍 {selectedMarker.latitude.toFixed(4)},{' '}
-                  {selectedMarker.longitude.toFixed(4)}
-                </p>
-                {selectedMarker.photo.exif?.DateTimeOriginal && (
-                  <p className="text-xs text-blue-700 dark:text-blue-300">
-                    📅{' '}
-                    {new Date(
-                      selectedMarker.photo.exif.DateTimeOriginal,
-                    ).toLocaleDateString(i18n.language)}
-                  </p>
-                )}
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={onClearSelection}
-              className="mt-2 w-full rounded bg-blue-100 px-2 py-1 text-xs text-blue-800 transition-colors hover:bg-blue-200 dark:bg-blue-800 dark:text-blue-200 dark:hover:bg-blue-700"
-            >
-              {t('explory.clear.selection')}
-            </button>
-          </m.div>
-        )}
-      </AnimatePresence>
     </m.div>
   )
 }

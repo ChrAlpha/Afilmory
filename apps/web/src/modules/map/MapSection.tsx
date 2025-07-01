@@ -9,19 +9,15 @@ import {
   MapInfoPanel,
   MapLoadingState,
 } from '~/components/ui/map'
-import { useMapData, useMapSelection } from '~/hooks/useMap'
 import {
+  calculateMapBounds,
   convertPhotosToMarkersFromEXIF,
   getInitialViewStateForMarkers,
 } from '~/lib/map-utils'
-import { MapProvider } from '~/providers/map-provider'
+import type { MapBounds, PhotoMarker } from '~/types/map'
 
 export const MapSection = () => {
-  return (
-    <MapProvider initialConfig={{ showGeocoder: true, theme: 'auto' }}>
-      <MapSectionContent />
-    </MapProvider>
-  )
+  return <MapSectionContent />
 }
 
 const MapSectionContent = () => {
@@ -30,10 +26,13 @@ const MapSectionContent = () => {
   // Photo markers state and loading logic
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
+  const [markers, setMarkers] = useState<PhotoMarker[]>([])
 
-  // Use map context for data management
-  const { markers, setMarkers, bounds } = useMapData()
-  const { selectedMarker, selectMarker, clearSelection } = useMapSelection()
+  // Calculate bounds from markers
+  const bounds = useMemo<MapBounds | null>(() => {
+    if (markers.length === 0) return null
+    return calculateMapBounds(markers)
+  }, [markers])
 
   // Load photo markers effect
   useEffect(() => {
@@ -94,12 +93,7 @@ const MapSectionContent = () => {
       <MapBackButton />
 
       {/* Map info panel */}
-      <MapInfoPanel
-        markersCount={markers.length}
-        bounds={bounds}
-        selectedMarker={selectedMarker}
-        onClearSelection={clearSelection}
-      />
+      <MapInfoPanel markersCount={markers.length} bounds={bounds} />
 
       {/* Generic Map component */}
       <m.div
@@ -111,7 +105,6 @@ const MapSectionContent = () => {
         <GenericMap
           markers={markers}
           initialViewState={initialViewState}
-          onMarkerClick={selectMarker}
           className="h-full w-full"
         />
       </m.div>
