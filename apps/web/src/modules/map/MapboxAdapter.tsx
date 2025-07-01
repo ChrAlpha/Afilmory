@@ -6,7 +6,7 @@ import type { MapRef } from 'react-map-gl/mapbox'
 
 import { Mapbox } from '~/components/ui/map/Mapbox'
 import { useIsDark } from '~/hooks/common'
-import { useMapContext } from '~/hooks/useMap'
+import { useMapContext, useMapSelection } from '~/hooks/useMap'
 import type { BaseMapProps, PhotoMarker } from '~/types/map'
 
 // You need to set VITE_MAPBOX_ACCESS_TOKEN in your environment variables
@@ -65,7 +65,8 @@ export const MapboxMapComponent: React.FC<BaseMapProps> = ({
   const isDark = useIsDark()
 
   // Get configuration from Map Provider context
-  const { config, popupInfo, setPopupInfo } = useMapContext()
+  const { config } = useMapContext()
+  const { selectedMarker, clearSelection } = useMapSelection()
 
   // Use config values with props as fallback
   const effectiveShowGeocoder = showGeocoder ?? config.showGeocoder
@@ -124,24 +125,10 @@ export const MapboxMapComponent: React.FC<BaseMapProps> = ({
   // Handle marker click
   const handleMarkerClick = React.useCallback(
     (marker: PhotoMarker) => {
-      if (handlers?.onMarkerClick) {
-        handlers.onMarkerClick(marker)
-      } else {
-        // Fallback to setting popup info in global state
-        setPopupInfo({
-          marker,
-          longitude: marker.longitude,
-          latitude: marker.latitude,
-        })
-      }
+      handlers?.onMarkerClick?.(marker)
     },
-    [handlers, setPopupInfo],
+    [handlers],
   )
-
-  // Handle popup close
-  const handlePopupClose = React.useCallback(() => {
-    setPopupInfo(null)
-  }, [setPopupInfo])
 
   // Handle geolocate
   const handleGeolocate = React.useCallback(
@@ -158,15 +145,15 @@ export const MapboxMapComponent: React.FC<BaseMapProps> = ({
       initialViewState={initialViewState}
       markers={markers}
       geoJsonData={geoJsonData}
+      selectedMarker={selectedMarker}
       onMarkerClick={handleMarkerClick}
+      onMarkerClose={clearSelection}
       onGeoJsonClick={handleGeoJsonClick}
       onGeolocate={handleGeolocate}
       className={className}
       style={style}
       mapboxToken={MAPBOX_TOKEN || ''}
       mapRef={mapRef}
-      popupInfo={popupInfo}
-      onPopupClose={handlePopupClose}
       theme={effectiveTheme}
     />
   )

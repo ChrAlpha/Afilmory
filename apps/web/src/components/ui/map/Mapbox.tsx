@@ -10,7 +10,6 @@ import type { PhotoMarker } from '~/types/map'
 import { GeoJsonLayer } from './GeoJsonLayer'
 import { MapControls } from './MapControls'
 import { PhotoMarkerPin } from './PhotoMarkerPin'
-import { PhotoPopup } from './PhotoPopup'
 
 const MAP_STYLES = {
   light: 'mapbox://styles/mapbox/light-v11',
@@ -36,19 +35,15 @@ export interface PureMapboxProps {
   }
   markers?: PhotoMarker[]
   geoJsonData?: GeoJSON.FeatureCollection
+  selectedMarker?: PhotoMarker | null
   onMarkerClick?: (marker: PhotoMarker) => void
+  onMarkerClose?: () => void
   onGeoJsonClick?: (event: any) => void
   onGeolocate?: (longitude: number, latitude: number) => void
   className?: string
   style?: React.CSSProperties
   mapboxToken: string
   mapRef?: React.RefObject<any>
-  popupInfo?: {
-    marker: PhotoMarker
-    longitude: number
-    latitude: number
-  } | null
-  onPopupClose?: () => void
   theme?: 'light' | 'dark'
 }
 
@@ -57,17 +52,32 @@ export const Mapbox = ({
   initialViewState = DEFAULT_VIEW_STATE,
   markers = DEFAULT_MARKERS,
   geoJsonData,
+  selectedMarker = null,
   onMarkerClick,
+  onMarkerClose,
   onGeoJsonClick,
   onGeolocate,
   className = 'w-full h-full',
   style = DEFAULT_STYLE,
   mapboxToken,
   mapRef,
-  popupInfo,
-  onPopupClose,
   theme = 'dark',
 }: PureMapboxProps) => {
+  // Handle marker click
+  const handleMarkerClick = (marker: PhotoMarker) => {
+    // If clicking the already selected marker, deselect it
+    if (selectedMarker?.id === marker.id) {
+      onMarkerClose?.()
+    } else {
+      // Otherwise select the new marker
+      onMarkerClick?.(marker)
+    }
+  }
+
+  // Handle marker close
+  const handleMarkerClose = () => {
+    onMarkerClose?.()
+  }
   if (!mapboxToken) {
     return (
       <div
@@ -106,14 +116,11 @@ export const Mapbox = ({
           <PhotoMarkerPin
             key={marker.id}
             marker={marker}
-            onClick={onMarkerClick || (() => {})}
+            isSelected={selectedMarker?.id === marker.id}
+            onClick={handleMarkerClick}
+            onClose={handleMarkerClose}
           />
         ))}
-
-        {/* Popup */}
-        {popupInfo && onPopupClose && (
-          <PhotoPopup popupInfo={popupInfo} onClose={onPopupClose} />
-        )}
 
         {/* GeoJSON Layer */}
         {geoJsonData && <GeoJsonLayer data={geoJsonData} />}
