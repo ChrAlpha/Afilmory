@@ -1,6 +1,133 @@
-import { Marker } from 'react-map-gl/mapbox'
+'use client'
+
+// Styles
+import 'maplibre-gl/dist/maplibre-gl.css'
+
+import { useState } from 'react'
+import type { LayerProps } from 'react-map-gl/maplibre'
+import Map, {
+  GeolocateControl,
+  Layer,
+  Marker,
+  NavigationControl,
+  Source,
+} from 'react-map-gl/maplibre'
 
 import type { PhotoMarker } from '~/types/map'
+
+const MAP_STYLES = {
+  light: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
+  dark: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
+} as const
+
+// Default values to avoid inline object creation
+const DEFAULT_VIEW_STATE = {
+  longitude: -122.4,
+  latitude: 37.8,
+  zoom: 14,
+}
+
+const DEFAULT_MARKERS: PhotoMarker[] = []
+const DEFAULT_STYLE = { width: '100%', height: '100%' }
+
+export interface PureMaplibreProps {
+  id?: string
+  initialViewState?: {
+    longitude: number
+    latitude: number
+    zoom: number
+  }
+  markers?: PhotoMarker[]
+  geoJsonData?: GeoJSON.FeatureCollection
+  onMarkerClick?: (marker: PhotoMarker) => void
+  onGeoJsonClick?: (event: any) => void
+  onGeolocate?: (longitude: number, latitude: number) => void
+  className?: string
+  style?: React.CSSProperties
+  mapRef?: React.RefObject<any>
+  theme?: 'light' | 'dark'
+}
+
+export const Maplibre = ({
+  id,
+  initialViewState = DEFAULT_VIEW_STATE,
+  markers = DEFAULT_MARKERS,
+  geoJsonData,
+  onMarkerClick,
+  onGeoJsonClick,
+  onGeolocate,
+  className = 'w-full h-full',
+  style = DEFAULT_STYLE,
+  mapRef,
+  theme = 'dark',
+}: PureMaplibreProps) => {
+  const [selectedMarkerId, setSelectedMarkerId] = useState<string | null>(null)
+
+  // Handle marker click
+  const handleMarkerClick = (marker: PhotoMarker) => {
+    // Toggle selection: if already selected, deselect; otherwise select
+    setSelectedMarkerId((prev) => (prev === marker.id ? null : marker.id))
+    onMarkerClick?.(marker)
+  }
+
+  // Handle marker close
+  const handleMarkerClose = () => {
+    setSelectedMarkerId(null)
+  }
+
+  const mapStyle = `${MAP_STYLES[theme]}`
+
+  return (
+    <div className={className} style={style}>
+      <Map
+        id={id}
+        ref={mapRef}
+        initialViewState={initialViewState}
+        style={{ width: '100%', height: '100%' }}
+        mapStyle={mapStyle}
+        interactiveLayerIds={geoJsonData ? ['data'] : undefined}
+        onClick={onGeoJsonClick}
+      >
+        {/* Map Controls */}
+        <MapControls onGeolocate={onGeolocate} />
+
+        {/* Photo Markers */}
+        {markers.map((marker) => (
+          <PhotoMarkerPin
+            key={marker.id}
+            marker={marker}
+            isSelected={selectedMarkerId === marker.id}
+            onClick={handleMarkerClick}
+            onClose={handleMarkerClose}
+          />
+        ))}
+
+        {/* GeoJSON Layer */}
+        {geoJsonData && <GeoJsonLayer data={geoJsonData} />}
+      </Map>
+    </div>
+  )
+}
+
+// Default layer style
+const DEFAULT_LAYER_STYLE: LayerProps = {
+  id: 'data',
+  type: 'fill',
+  paint: {
+    'fill-color': '#0080ff',
+    'fill-opacity': 0.5,
+  },
+}
+
+// Component interfaces
+interface GeoJsonLayerProps {
+  data: GeoJSON.FeatureCollection
+  layerStyle?: LayerProps
+}
+
+interface MapControlsProps {
+  onGeolocate?: (longitude: number, latitude: number) => void
+}
 
 interface PhotoMarkerPinProps {
   marker: PhotoMarker
@@ -9,7 +136,34 @@ interface PhotoMarkerPinProps {
   onClose?: () => void
 }
 
-export const PhotoMarkerPin = ({
+// Component implementations
+const GeoJsonLayer = ({
+  data,
+  layerStyle = DEFAULT_LAYER_STYLE,
+}: GeoJsonLayerProps) => {
+  return (
+    <Source type="geojson" data={data}>
+      <Layer {...layerStyle} />
+    </Source>
+  )
+}
+
+const MapControls = ({ onGeolocate }: MapControlsProps) => {
+  return (
+    <>
+      <NavigationControl position="bottom-left" />
+      <GeolocateControl
+        position="bottom-left"
+        trackUserLocation
+        onGeolocate={(e) => {
+          onGeolocate?.(e.coords.longitude, e.coords.latitude)
+        }}
+      />
+    </>
+  )
+}
+
+const PhotoMarkerPin = ({
   marker,
   isSelected = false,
   onClick,

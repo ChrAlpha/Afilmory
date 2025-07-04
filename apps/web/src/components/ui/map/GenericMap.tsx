@@ -1,7 +1,7 @@
 import * as React from 'react'
 
 import { getInitialViewStateForMarkers } from '~/lib/map-utils'
-import { MapboxMapComponent } from '~/modules/map/MapboxAdapter'
+import { useMapAdapter } from '~/modules/map/MapProvider'
 import type { BaseMapProps, PhotoMarker } from '~/types/map'
 
 interface GenericMapProps extends Omit<BaseMapProps, 'handlers'> {
@@ -30,6 +30,7 @@ export const GenericMap: React.FC<GenericMapProps> = ({
   initialViewState,
   ...props
 }) => {
+  const adapter = useMapAdapter()
   // Calculate initial view state from markers
   const calculatedInitialViewState = React.useMemo(
     () => initialViewState || getInitialViewStateForMarkers(markers),
@@ -46,8 +47,14 @@ export const GenericMap: React.FC<GenericMapProps> = ({
     [onMarkerClick, onGeoJsonClick, onGeolocate],
   )
 
+  if (!adapter) {
+    return <div>Map provider not available</div>
+  }
+
+  const { MapComponent } = adapter
+
   return (
-    <MapboxMapComponent
+    <MapComponent
       {...props}
       markers={markers}
       initialViewState={calculatedInitialViewState}

@@ -1,55 +1,41 @@
-import type { GeocoderOptions } from '@mapbox/mapbox-gl-geocoder'
-import MapboxGeocoder from '@mapbox/mapbox-gl-geocoder'
-import * as mapboxgl from 'mapbox-gl'
 import * as React from 'react'
-import type { MapRef } from 'react-map-gl/mapbox'
+import type { MapRef } from 'react-map-gl/maplibre'
 
-import { Mapbox } from '~/components/ui/map/Mapbox'
+import { Maplibre } from '~/components/ui/map/MapLibre'
 import { useIsDark } from '~/hooks/common'
 import type { BaseMapProps, PhotoMarker } from '~/types/map'
 
 import type { MapAdapter } from './MapProvider'
 
-// You need to set VITE_MAPBOX_ACCESS_TOKEN in your environment variables
-const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN
-
 /**
- * Mapbox map adapter implementation
- * This adapts Mapbox to work with our generic map provider system
+ * MapLibre map adapter implementation
+ * This adapts MapLibre to work with our generic map provider system
  */
-export class MapboxMapAdapter implements MapAdapter {
-  name = 'mapbox'
+export class MapLibreMapAdapter implements MapAdapter {
+  name = 'maplibre'
 
-  get isAvailable(): boolean {
-    return !!MAPBOX_TOKEN
-  }
+  readonly isAvailable: boolean = true
 
   async initialize(): Promise<void> {
-    if (!this.isAvailable) {
-      throw new Error(
-        'Mapbox token not found. Please set VITE_MAPBOX_ACCESS_TOKEN in your environment variables.',
-      )
-    }
-    // Mapbox doesn't require additional initialization
+    // MapLibre doesn't require additional async initialization
   }
 
   cleanup(): void {
-    // No cleanup needed for Mapbox
+    // No cleanup needed for MapLibre
   }
 }
 
 /**
- * Mapbox map component that integrates with the Map Provider context
+ * MapLibre map component that integrates with the Map Provider context
  * This component reads configuration from the MapProvider context
  */
-export const MapboxMapComponent: React.FC<BaseMapProps> = ({
+export const MapLibreMapComponent: React.FC<BaseMapProps> = ({
   id,
   initialViewState,
   markers,
   geoJsonData,
   className,
   style,
-  showGeocoder = true, // Default to true
   handlers,
 }) => {
   const mapRef = React.useRef<MapRef>(null)
@@ -62,31 +48,11 @@ export const MapboxMapComponent: React.FC<BaseMapProps> = ({
   const DEFAULT_ANIMATION_DURATION = 1000
   const DEFAULT_ZOOM = 14
 
-  // Add Geocoder control
-  React.useEffect(() => {
-    if (!showGeocoder || !mapRef.current || !MAPBOX_TOKEN) return
-
-    const map = mapRef.current
-    const geocoderOptions: GeocoderOptions = {
-      accessToken: MAPBOX_TOKEN,
-      mapboxgl,
-    }
-    const geocoder = new MapboxGeocoder(geocoderOptions)
-
-    map.getMap().addControl(geocoder)
-
-    return () => {
-      if (map) {
-        map.getMap().removeControl(geocoder)
-      }
-    }
-  }, [showGeocoder])
-
   // Handle GeoJSON click
   const handleGeoJsonClick = React.useCallback(
     (
-      event: mapboxgl.MapMouseEvent & {
-        features?: mapboxgl.GeoJSONFeature[]
+      event: maplibregl.MapMouseEvent & {
+        features?: maplibregl.GeoJSONFeature[]
       },
     ) => {
       if (!handlers?.onGeoJsonClick) return
@@ -129,7 +95,7 @@ export const MapboxMapComponent: React.FC<BaseMapProps> = ({
   )
 
   return (
-    <Mapbox
+    <Maplibre
       id={id}
       initialViewState={initialViewState}
       markers={markers}
@@ -139,7 +105,6 @@ export const MapboxMapComponent: React.FC<BaseMapProps> = ({
       onGeolocate={handleGeolocate}
       className={className}
       style={style}
-      mapboxToken={MAPBOX_TOKEN || ''}
       mapRef={mapRef}
       theme={theme}
     />
@@ -147,8 +112,8 @@ export const MapboxMapComponent: React.FC<BaseMapProps> = ({
 }
 
 /**
- * Create a Mapbox adapter instance
+ * Create a MapLibre adapter instance
  */
-export const createMapboxAdapter = (): MapAdapter => {
-  return new MapboxMapAdapter()
+export const createMapLibreAdapter = (): MapAdapter => {
+  return new MapLibreMapAdapter()
 }

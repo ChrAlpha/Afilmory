@@ -14,10 +14,15 @@ import {
   convertPhotosToMarkersFromEXIF,
   getInitialViewStateForMarkers,
 } from '~/lib/map-utils'
+import { MapProvider } from '~/modules/map/MapProvider'
 import type { MapBounds, PhotoMarker } from '~/types/map'
 
 export const MapSection = () => {
-  return <MapSectionContent />
+  return (
+    <MapProvider>
+      <MapSectionContent />
+    </MapProvider>
+  )
 }
 
 const MapSectionContent = () => {
