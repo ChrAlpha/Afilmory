@@ -3,8 +3,8 @@ import { createContext, use, useMemo } from 'react'
 
 import type { BaseMapProps } from '~/types/map'
 
-import { createMapboxAdapter, MapboxMapComponent } from './MapboxAdapter'
-import { createMapLibreAdapter, MapLibreMapComponent } from './MapLibreAdapter'
+import { createMapboxAdapter } from './MapboxAdapter'
+import { createMapLibreAdapter } from './MapLibreAdapter'
 
 /**
  * Defines the interface for a map adapter.
@@ -45,12 +45,12 @@ const ADAPTERS = [
   {
     name: 'maplibre',
     adapter: maplibreAdapter,
-    component: MapLibreMapComponent,
+    component: maplibreAdapter.MapComponent,
   },
   {
     name: 'mapbox',
     adapter: mapboxAdapter,
-    component: MapboxMapComponent,
+    component: mapboxAdapter.MapComponent,
   },
 ]
 

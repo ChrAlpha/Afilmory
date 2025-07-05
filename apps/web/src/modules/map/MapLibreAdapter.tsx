@@ -16,6 +16,8 @@ export class MapLibreMapAdapter implements MapAdapter {
 
   readonly isAvailable: boolean = true
 
+  MapComponent = MapLibreMapComponent
+
   async initialize(): Promise<void> {
     // MapLibre doesn't require additional async initialization
   }

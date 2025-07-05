@@ -24,6 +24,8 @@ export class MapboxMapAdapter implements MapAdapter {
     return !!MAPBOX_TOKEN
   }
 
+  MapComponent = MapboxMapComponent
+
   async initialize(): Promise<void> {
     if (!this.isAvailable) {
       throw new Error(
