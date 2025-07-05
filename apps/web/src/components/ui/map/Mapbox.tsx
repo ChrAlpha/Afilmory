@@ -13,6 +13,7 @@ import Map, {
   Source,
 } from 'react-map-gl/mapbox'
 
+import { LazyImage } from '~/components/ui/lazy-image'
 import type { PhotoMarker } from '~/types/map'
 
 const MAP_STYLES = {
@@ -245,11 +246,13 @@ const PhotoMarkerPin = ({
 
               {/* Photo */}
               <div className="relative">
-                <img
+                <LazyImage
                   src={marker.photo.thumbnailUrl || marker.photo.originalUrl}
                   alt={marker.photo.title || marker.photo.id}
-                  className="h-32 w-full object-cover"
-                  loading="lazy"
+                  thumbHash={marker.photo.thumbHash}
+                  className="h-32 w-full"
+                  rootMargin="200px"
+                  threshold={0.1}
                 />
               </div>
 
