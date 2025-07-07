@@ -24,7 +24,6 @@ export const MapInfoPanel = ({ markersCount, bounds }: MapInfoPanelProps) => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.2, delay: 0.4 }}
       >
-        <span className="text-2xl">🗺️</span>
         <div>
           <h1 className="text-lg font-bold text-gray-900 dark:text-gray-100">
             {t('explory.explore.map')}

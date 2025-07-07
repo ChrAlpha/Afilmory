@@ -1,8 +1,7 @@
-'use client'
-
 // Styles
 import 'maplibre-gl/dist/maplibre-gl.css'
 
+import { m } from 'motion/react'
 import { useMemo, useState } from 'react'
 import type { LayerProps } from 'react-map-gl/maplibre'
 import Map, {
@@ -12,6 +11,7 @@ import Map, {
   NavigationControl,
   Source,
 } from 'react-map-gl/maplibre'
+import { Link } from 'react-router'
 
 import { LazyImage } from '~/components/ui/lazy-image'
 import type { PhotoMarker } from '~/types/map'
@@ -372,19 +372,20 @@ const PhotoMarkerPin = ({
       key={marker.id}
       longitude={marker.longitude}
       latitude={marker.latitude}
-      style={{ cursor: 'pointer' }}
-      onClick={handleClick}
     >
       <div className="group relative">
         {/* Marker icon */}
         <div
-          className={`flex h-8 w-8 items-center justify-center rounded-full border-2 border-white shadow-lg transition-all hover:scale-110 ${
+          className={`flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border-2 border-white shadow-lg transition-all hover:scale-110 ${
             isSelected
-              ? 'bg-orange-500 hover:bg-orange-600'
-              : 'bg-blue-500 hover:bg-blue-600'
+              ? 'bg-accent hover:bg-accent'
+              : 'bg-accent/50 hover:bg-accent/70'
           }`}
+          onClick={handleClick}
         >
-          <span className="text-xs font-semibold text-white">📷</span>
+          <span className="text-xs font-semibold text-white">
+            <i className="i-mingcute-camera-2-ai-fill" />
+          </span>
         </div>
 
         {/* Hover tooltip */}
@@ -394,13 +395,19 @@ const PhotoMarkerPin = ({
 
         {/* Selected popup */}
         {isSelected && (
-          <div className="absolute -top-64 left-1/2 z-50 -translate-x-1/2 transform">
-            <div className="relative w-64 overflow-hidden rounded-lg bg-white shadow-xl dark:bg-gray-800">
+          <m.div
+            className="absolute -top-68 left-1/2 z-50 -translate-x-1/2 transform"
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 20, opacity: 0 }}
+            transition={{ duration: 0.3, ease: 'easeOut' }}
+          >
+            <div className="relative w-64 cursor-default rounded-lg bg-white shadow-xl dark:bg-gray-800">
               {/* Close button */}
               <button
                 type="button"
                 onClick={handleClose}
-                className="absolute top-2 right-2 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-black/50 transition-colors hover:bg-black/70"
+                className="absolute top-2 right-2 z-10 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-black/50 transition-colors hover:bg-black/70"
               >
                 <span className="sr-only">Close</span>
                 <svg
@@ -418,7 +425,7 @@ const PhotoMarkerPin = ({
               </button>
 
               {/* Photo */}
-              <div className="relative">
+              <div className="relative overflow-hidden rounded-t-lg">
                 <LazyImage
                   src={marker.photo.thumbnailUrl || marker.photo.originalUrl}
                   alt={marker.photo.title || marker.photo.id}
@@ -430,17 +437,20 @@ const PhotoMarkerPin = ({
               </div>
 
               {/* Info */}
-              <div className="space-y-2 p-4">
-                <h3
-                  className="truncate text-sm font-semibold text-gray-900 dark:text-gray-100"
-                  title={marker.photo.title || marker.photo.id}
-                >
-                  {marker.photo.title || marker.photo.id}
-                </h3>
+              <div className="flex flex-col gap-2 p-4">
+                <Link to={`/${marker.photo.id}`} target="_blank">
+                  <h3
+                    className="truncate text-sm font-semibold text-gray-900 dark:text-gray-100"
+                    title={marker.photo.title || marker.photo.id}
+                  >
+                    {marker.photo.title || marker.photo.id}
+                    <i className="i-mingcute-link-2-fill ml-1 text-xs text-gray-500" />
+                  </h3>
+                </Link>
 
                 {marker.photo.exif?.DateTimeOriginal && (
-                  <p className="text-xs text-gray-600 dark:text-gray-400">
-                    📅{' '}
+                  <p className="inline-flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400">
+                    <i className="i-mingcute-calendar-2-line" />
                     {new Date(
                       marker.photo.exif.DateTimeOriginal,
                     ).toLocaleDateString()}
@@ -448,13 +458,15 @@ const PhotoMarkerPin = ({
                 )}
 
                 {marker.photo.exif?.Make && marker.photo.exif?.Model && (
-                  <p className="text-xs text-gray-600 dark:text-gray-400">
-                    📸 {marker.photo.exif.Make} {marker.photo.exif.Model}
+                  <p className="inline-flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400">
+                    <i className="i-mingcute-camera-2-line" />
+                    {marker.photo.exif.Make} {marker.photo.exif.Model}
                   </p>
                 )}
 
-                <p className="text-xs text-gray-500 dark:text-gray-500">
-                  📍 {marker.latitude.toFixed(6)}, {marker.longitude.toFixed(6)}
+                <p className="inline-flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400">
+                  <i className="i-mingcute-map-line" />
+                  {marker.latitude.toFixed(6)}, {marker.longitude.toFixed(6)}
                 </p>
               </div>
 
@@ -463,7 +475,7 @@ const PhotoMarkerPin = ({
                 <div className="h-4 w-4 rotate-45 bg-white dark:bg-gray-800" />
               </div>
             </div>
-          </div>
+          </m.div>
         )}
       </div>
     </Marker>
