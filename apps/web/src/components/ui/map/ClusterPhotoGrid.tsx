@@ -27,7 +27,7 @@ export const ClusterPhotoGrid = ({
         <h3 className="text-text text-sm font-semibold">
           {photos.length} 张照片
         </h3>
-        <div className="text-text-tertiary text-xs">点击查看详情</div>
+        <div className="text-text-secondary text-xs">点击查看详情</div>
       </div>
 
       {/* 照片网格 */}
