@@ -39,6 +39,7 @@ export interface BaseMapProps {
   theme?: 'light' | 'dark'
   showGeocoder?: boolean
   handlers?: MapHandlers
+  autoFitBounds?: boolean
 }
 
 /**

@@ -28,14 +28,18 @@ export const GenericMap: React.FC<GenericMapProps> = ({
   onGeoJsonClick,
   onGeolocate,
   initialViewState,
+  autoFitBounds = true,
   ...props
 }) => {
   const adapter = useMapAdapter()
-  // Calculate initial view state from markers
-  const calculatedInitialViewState = React.useMemo(
-    () => initialViewState || getInitialViewStateForMarkers(markers),
-    [initialViewState, markers],
-  )
+  // Calculate initial view state from markers (only if autoFitBounds is disabled)
+  const calculatedInitialViewState = React.useMemo(() => {
+    if (autoFitBounds) {
+      // 如果开启自动适配，则使用传入的initialViewState或默认值
+      return initialViewState || { longitude: 0, latitude: 0, zoom: 2 }
+    }
+    return initialViewState || getInitialViewStateForMarkers(markers)
+  }, [initialViewState, markers, autoFitBounds])
 
   // Prepare handlers for the specific map adapter
   const handlers = React.useMemo(
@@ -58,6 +62,7 @@ export const GenericMap: React.FC<GenericMapProps> = ({
       {...props}
       markers={markers}
       initialViewState={calculatedInitialViewState}
+      autoFitBounds={autoFitBounds}
       handlers={handlers}
     />
   )

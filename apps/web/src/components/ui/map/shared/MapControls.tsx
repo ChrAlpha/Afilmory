@@ -105,7 +105,7 @@ export const MapControls = ({ onGeolocate }: MapControlsProps) => {
           className="group hover:bg-fill-secondary active:bg-fill-tertiary flex h-12 w-12 items-center justify-center transition-colors"
           title="定位到我的位置"
         >
-          <i className="i-mingcute-location-line text-text size-5 transition-transform group-hover:scale-110 group-active:scale-95" />
+          <i className="i-mingcute-location-fill text-text size-5 transition-transform group-hover:scale-110 group-active:scale-95" />
         </button>
       </div>
     </m.div>

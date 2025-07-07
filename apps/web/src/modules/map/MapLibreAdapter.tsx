@@ -41,6 +41,7 @@ export const MapLibreMapComponent: React.FC<BaseMapProps> = ({
   className,
   style,
   handlers,
+  autoFitBounds,
 }) => {
   const mapRef = React.useRef<MapRef>(null)
 
@@ -106,6 +107,7 @@ export const MapLibreMapComponent: React.FC<BaseMapProps> = ({
       className={className}
       style={style}
       mapRef={mapRef}
+      autoFitBounds={autoFitBounds}
     />
   )
 }
