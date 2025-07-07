@@ -16,15 +16,10 @@ export interface SiteConfig {
 
 /**
  * Map configuration - can be either:
- * - A string for a single provider: 'maplibre' | 'mapbox'
- * - An array for multiple providers in priority order: ['maplibre', 'mapbox']
- *
- * Examples:
- * - "maplibre" - Use only maplibre
- * - ["maplibre", "mapbox"] - Try maplibre first, fallback to mapbox
- * - ["mapbox", "maplibre"] - Try mapbox first, fallback to maplibre
+ * - A string for a single provider: 'maplibre'
+ * - An array for multiple providers in priority order: ['maplibre']
  */
-type MapConfig = 'maplibre' | 'mapbox' | ('maplibre' | 'mapbox')[]
+type MapConfig = 'maplibre'[]
 
 interface Feed {
   folo?: {

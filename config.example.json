@@ -10,7 +10,6 @@
     "avatar": "https://cdn.jsdelivr.net/gh/Innei/static@master/avatar.png"
   },
   "map": [
-    "maplibre",
-    "mapbox"
+    "maplibre"
   ]
 }

@@ -3,7 +3,6 @@ import { createContext, use, useMemo } from 'react'
 
 import type { BaseMapProps } from '~/types/map'
 
-import { createMapboxAdapter } from './MapboxAdapter'
 import { createMapLibreAdapter } from './MapLibreAdapter'
 
 /**
@@ -40,18 +39,12 @@ export const useMapAdapter = () => {
 }
 
 const maplibreAdapter = createMapLibreAdapter()
-const mapboxAdapter = createMapboxAdapter()
 
 const ADAPTERS = [
   {
     name: 'maplibre',
     adapter: maplibreAdapter,
     component: maplibreAdapter.MapComponent,
-  },
-  {
-    name: 'mapbox',
-    adapter: mapboxAdapter,
-    component: mapboxAdapter.MapComponent,
   },
 ]
 

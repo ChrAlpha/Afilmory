@@ -60,19 +60,3 @@ export interface MapViewState {
   latitude: number
   zoom: number
 }
-
-/**
- * Legacy Mapbox component props (deprecated)
- * @deprecated Use BaseMapProps from provider interface instead
- */
-export interface MapboxProps {
-  id?: string
-  initialViewState?: MapViewState
-  markers?: PhotoMarker[]
-  geoJsonData?: GeoJSON.FeatureCollection
-  onMarkerClick?: (marker: PhotoMarker) => void
-  onGeoJsonClick?: (feature: GeoJSON.Feature) => void
-  showGeocoder?: boolean
-  className?: string
-  style?: React.CSSProperties
-}

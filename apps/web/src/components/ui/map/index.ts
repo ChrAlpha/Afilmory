@@ -1,6 +1,5 @@
 export * from './GenericMap'
 export * from './MapBackButton'
-export * from './Mapbox'
 export * from './MapInfoPanel'
 export * from './MapLoadingState'
 export * from './shared'
