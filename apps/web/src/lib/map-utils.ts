@@ -6,6 +6,7 @@ import type {
   MapViewState,
   PhotoMarker,
 } from '~/types/map'
+import { GPSDirection } from '~/types/map'
 
 /**
  * GPS coordinate validation function
@@ -59,13 +60,41 @@ export function convertPhotoToMarkerFromEXIF(
       longitude = Number(exif.GPSLongitude)
     }
 
-    // Apply reference direction
-    if (exif.GPSLatitudeRef === 'S' || exif.GPSLatitudeRef === 'South') {
+    // Get GPS direction references
+    const latitudeRef =
+      exif.GPSLatitudeRef === 'S' || exif.GPSLatitudeRef === 'South'
+        ? GPSDirection.South
+        : GPSDirection.North
+
+    const longitudeRef =
+      exif.GPSLongitudeRef === 'W' || exif.GPSLongitudeRef === 'West'
+        ? GPSDirection.West
+        : GPSDirection.East
+
+    // Apply reference direction to coordinates
+    if (latitudeRef === GPSDirection.South) {
       latitude = -latitude
     }
 
-    if (exif.GPSLongitudeRef === 'W' || exif.GPSLongitudeRef === 'West') {
+    if (longitudeRef === GPSDirection.West) {
       longitude = -longitude
+    }
+
+    // Process altitude information
+    let altitude: number | undefined
+    let altitudeRef: 'Above Sea Level' | 'Below Sea Level' | undefined
+
+    if (exif.GPSAltitude && typeof exif.GPSAltitude === 'number') {
+      altitude = exif.GPSAltitude
+      altitudeRef =
+        exif.GPSAltitudeRef === 'Below Sea Level'
+          ? 'Below Sea Level'
+          : 'Above Sea Level'
+
+      // Apply altitude reference
+      if (altitudeRef === 'Below Sea Level') {
+        altitude = -altitude
+      }
     }
 
     // Validate coordinates
@@ -84,6 +113,10 @@ export function convertPhotoToMarkerFromEXIF(
       id: photo.id,
       longitude,
       latitude,
+      altitude,
+      latitudeRef,
+      longitudeRef,
+      altitudeRef,
       photo,
     }
   } catch (error) {

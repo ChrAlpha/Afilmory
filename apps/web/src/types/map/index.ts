@@ -3,21 +3,40 @@ import type { PhotoManifestItem } from '@afilmory/builder'
 export * from './provider'
 
 /**
+ * GPS Cardinal directions enum
+ */
+export enum GPSDirection {
+  North = 'N',
+  South = 'S',
+  East = 'E',
+  West = 'W',
+}
+
+/**
+ * Enhanced GPS coordinates interface with altitude and direction
+ */
+export interface GPSCoordinates {
+  latitude: number
+  longitude: number
+  altitude?: number
+  latitudeRef?: GPSDirection.North | GPSDirection.South
+  longitudeRef?: GPSDirection.East | GPSDirection.West
+  altitudeRef?: 'Above Sea Level' | 'Below Sea Level'
+}
+
+/**
  * Photo marker interface for map display
  */
 export interface PhotoMarker {
   id: string
   longitude: number
   latitude: number
-  photo: PhotoManifestItem
-}
+  altitude?: number
+  latitudeRef?: GPSDirection.North | GPSDirection.South
+  longitudeRef?: GPSDirection.East | GPSDirection.West
+  altitudeRef?: 'Above Sea Level' | 'Below Sea Level'
 
-/**
- * GPS coordinates interface
- */
-export interface GPSCoordinates {
-  latitude: number
-  longitude: number
+  photo: PhotoManifestItem
 }
 
 /**

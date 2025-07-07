@@ -13,8 +13,16 @@ import Map, {
 } from 'react-map-gl/maplibre'
 import { Link } from 'react-router'
 
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from '~/components/ui/hover-card'
 import { LazyImage } from '~/components/ui/lazy-image'
 import type { PhotoMarker } from '~/types/map'
+
+import { GlassButton } from '../button/GlassButton'
+import { ClusterPhotoGrid } from './ClusterPhotoGrid'
 
 // Clustering utilities
 interface ClusterPoint {
@@ -25,6 +33,7 @@ interface ClusterPoint {
     point_count?: number
     point_count_abbreviated?: string
     marker?: PhotoMarker
+    clusteredPhotos?: PhotoMarker[]
   }
   geometry: {
     type: 'Point'
@@ -99,6 +108,7 @@ function clusterMarkers(markers: PhotoMarker[], zoom: number): ClusterPoint[] {
           point_count: nearby.length,
           point_count_abbreviated: nearby.length.toString(),
           marker: nearby[0], // Representative marker for the cluster
+          clusteredPhotos: nearby, // All photos in the cluster
         },
         geometry: {
           type: 'Point',
@@ -111,10 +121,9 @@ function clusterMarkers(markers: PhotoMarker[], zoom: number): ClusterPoint[] {
   return clusters
 }
 
-const MAP_STYLES = {
-  light: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
-  dark: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
-} as const
+// 默认使用 dark 主题
+const MAP_STYLE =
+  'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json'
 
 // Default values to avoid inline object creation
 const DEFAULT_VIEW_STATE = {
@@ -138,10 +147,10 @@ export interface PureMaplibreProps {
   onMarkerClick?: (marker: PhotoMarker) => void
   onGeoJsonClick?: (event: any) => void
   onGeolocate?: (longitude: number, latitude: number) => void
+  onClusterClick?: (longitude: number, latitude: number) => void
   className?: string
   style?: React.CSSProperties
   mapRef?: React.RefObject<any>
-  theme?: 'light' | 'dark'
 }
 
 export const Maplibre = ({
@@ -152,10 +161,10 @@ export const Maplibre = ({
   onMarkerClick,
   onGeoJsonClick,
   onGeolocate,
+  onClusterClick,
   className = 'w-full h-full',
   style = DEFAULT_STYLE,
   mapRef,
-  theme = 'dark',
 }: PureMaplibreProps) => {
   const [selectedMarkerId, setSelectedMarkerId] = useState<string | null>(null)
   const [currentZoom, setCurrentZoom] = useState(initialViewState.zoom)
@@ -172,8 +181,6 @@ export const Maplibre = ({
     setSelectedMarkerId(null)
   }
 
-  const mapStyle = `${MAP_STYLES[theme]}`
-
   // Clustered markers
   const clusteredMarkers = useMemo(
     () => clusterMarkers(markers, currentZoom),
@@ -187,7 +194,7 @@ export const Maplibre = ({
         ref={mapRef}
         initialViewState={initialViewState}
         style={{ width: '100%', height: '100%' }}
-        mapStyle={mapStyle}
+        mapStyle={MAP_STYLE}
         interactiveLayerIds={geoJsonData ? ['data'] : undefined}
         onClick={onGeoJsonClick}
         onMove={(evt) => {
@@ -208,6 +215,8 @@ export const Maplibre = ({
                 latitude={clusterPoint.geometry.coordinates[1]}
                 pointCount={clusterPoint.properties.point_count || 0}
                 representativeMarker={clusterPoint.properties.marker}
+                clusteredPhotos={clusterPoint.properties.clusteredPhotos}
+                onClusterClick={onClusterClick}
               />
             )
           } else {
@@ -266,6 +275,8 @@ interface ClusterMarkerProps {
   latitude: number
   pointCount: number
   representativeMarker?: PhotoMarker
+  clusteredPhotos?: PhotoMarker[]
+  onClusterClick?: (longitude: number, latitude: number) => void
 }
 
 // Component implementations
@@ -299,55 +310,118 @@ const ClusterMarker = ({
   longitude,
   latitude,
   pointCount,
-  representativeMarker,
+  representativeMarker: _representativeMarker,
+  clusteredPhotos = [],
+  onClusterClick,
 }: ClusterMarkerProps) => {
-  const size = Math.min(50, Math.max(32, 24 + Math.log(pointCount) * 8))
+  const size = Math.min(64, Math.max(40, 32 + Math.log(pointCount) * 8))
 
   return (
     <Marker longitude={longitude} latitude={latitude}>
-      <div className="group relative">
-        {/* Cluster circle */}
-        <div
-          className="flex items-center justify-center rounded-full border-3 border-white bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg transition-all hover:scale-110 hover:from-blue-600 hover:to-blue-700"
-          style={{
-            width: size,
-            height: size,
-          }}
-        >
-          {/* Background thumbhash if available */}
-          {representativeMarker?.photo.thumbHash && (
-            <div className="absolute inset-1 overflow-hidden rounded-full opacity-30">
-              <LazyImage
-                src={
-                  representativeMarker.photo.thumbnailUrl ||
-                  representativeMarker.photo.originalUrl
-                }
-                alt={
-                  representativeMarker.photo.title ||
-                  representativeMarker.photo.id
-                }
-                thumbHash={representativeMarker.photo.thumbHash}
-                className="h-full w-full object-cover"
-                rootMargin="100px"
-                threshold={0.1}
-              />
-            </div>
-          )}
-
-          {/* Count text */}
-          <span
-            className="relative z-10 font-bold text-white drop-shadow-sm"
-            style={{ fontSize: Math.max(12, size / 4) }}
+      <HoverCard openDelay={300} closeDelay={150}>
+        <HoverCardTrigger asChild>
+          <m.div
+            className="group relative cursor-pointer"
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{
+              type: 'spring',
+              stiffness: 300,
+              damping: 25,
+            }}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => onClusterClick?.(longitude, latitude)}
           >
-            {pointCount}
-          </span>
-        </div>
+            {/* Subtle pulse ring for attention */}
+            <div
+              className="bg-blue/20 absolute inset-0 animate-pulse rounded-full opacity-60"
+              style={{
+                width: size + 12,
+                height: size + 12,
+                left: -6,
+                top: -6,
+              }}
+            />
 
-        {/* Hover tooltip */}
-        <div className="pointer-events-none absolute -top-10 left-1/2 -translate-x-1/2 transform rounded bg-black/75 px-2 py-1 text-xs whitespace-nowrap text-white opacity-0 transition-opacity group-hover:opacity-100">
-          {pointCount} photos in this area
-        </div>
-      </div>
+            {/* Main cluster container */}
+            <div
+              className="relative flex items-center justify-center rounded-full border border-white/40 bg-white/95 shadow-lg backdrop-blur-md transition-all duration-300 hover:bg-white hover:shadow-xl dark:border-white/10 dark:bg-black/80 dark:hover:bg-black/90"
+              style={{
+                width: size,
+                height: size,
+              }}
+            >
+              {/* Background mosaic of photos */}
+              {clusteredPhotos.length > 0 && (
+                <div className="absolute inset-1 overflow-hidden rounded-full">
+                  {/* Show up to 4 photos in a mosaic pattern */}
+                  {clusteredPhotos.slice(0, 4).map((photoMarker, index) => {
+                    const positions = [
+                      { left: '0%', top: '0%', width: '50%', height: '50%' },
+                      { left: '50%', top: '0%', width: '50%', height: '50%' },
+                      { left: '0%', top: '50%', width: '50%', height: '50%' },
+                      { left: '50%', top: '50%', width: '50%', height: '50%' },
+                    ]
+                    const position = positions[index]
+
+                    return (
+                      <div
+                        key={photoMarker.photo.id}
+                        className="absolute opacity-30"
+                        style={position}
+                      >
+                        <LazyImage
+                          src={
+                            photoMarker.photo.thumbnailUrl ||
+                            photoMarker.photo.originalUrl
+                          }
+                          alt={photoMarker.photo.title || photoMarker.photo.id}
+                          thumbHash={photoMarker.photo.thumbHash}
+                          className="h-full w-full object-cover"
+                          rootMargin="100px"
+                          threshold={0.1}
+                        />
+                      </div>
+                    )
+                  })}
+
+                  {/* Overlay for mosaic effect */}
+                  <div className="from-blue/40 to-indigo/60 absolute inset-0 bg-gradient-to-br" />
+                </div>
+              )}
+
+              {/* Glass morphism overlay */}
+              <div className="absolute inset-0 rounded-full bg-gradient-to-br from-white/30 to-white/10 dark:from-white/20 dark:to-white/5" />
+
+              {/* Count display */}
+              <div className="relative z-10 flex flex-col items-center text-xs">
+                <span className="text-text font-bold">{pointCount}</span>
+              </div>
+
+              {/* Subtle inner shadow for depth */}
+              <div className="absolute inset-0 rounded-full shadow-inner shadow-black/5" />
+            </div>
+          </m.div>
+        </HoverCardTrigger>
+
+        <HoverCardContent
+          className="w-80 overflow-hidden border-white/20 bg-white/95 p-0 backdrop-blur-[120px] dark:bg-black/95"
+          side="top"
+          align="center"
+          sideOffset={8}
+        >
+          <div className="p-4">
+            <ClusterPhotoGrid
+              photos={clusteredPhotos}
+              onPhotoClick={(_photo) => {
+                // Optional: handle individual photo clicks
+                // Photo click handling can be implemented here if needed
+              }}
+            />
+          </div>
+        </HoverCardContent>
+      </HoverCard>
     </Marker>
   )
 }
@@ -373,111 +447,254 @@ const PhotoMarkerPin = ({
       longitude={marker.longitude}
       latitude={marker.latitude}
     >
-      <div className="group relative">
-        {/* Marker icon */}
-        <div
-          className={`flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border-2 border-white shadow-lg transition-all hover:scale-110 ${
-            isSelected
-              ? 'bg-accent hover:bg-accent'
-              : 'bg-accent/50 hover:bg-accent/70'
-          }`}
-          onClick={handleClick}
-        >
-          <span className="text-xs font-semibold text-white">
-            <i className="i-mingcute-camera-2-ai-fill" />
-          </span>
-        </div>
-
-        {/* Hover tooltip */}
-        <div className="pointer-events-none absolute -top-10 left-1/2 -translate-x-1/2 transform rounded bg-black/75 px-2 py-1 text-xs whitespace-nowrap text-white opacity-0 transition-opacity group-hover:opacity-100">
-          {marker.photo.title || marker.photo.id}
-        </div>
-
-        {/* Selected popup */}
-        {isSelected && (
+      <HoverCard openDelay={400} closeDelay={100}>
+        <HoverCardTrigger asChild>
           <m.div
-            className="absolute -top-68 left-1/2 z-50 -translate-x-1/2 transform"
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 20, opacity: 0 }}
-            transition={{ duration: 0.3, ease: 'easeOut' }}
+            className="group relative cursor-pointer"
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{
+              type: 'spring',
+              stiffness: 400,
+              damping: 30,
+            }}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={handleClick}
           >
-            <div className="relative w-64 cursor-default rounded-lg bg-white shadow-xl dark:bg-gray-800">
-              {/* Close button */}
-              <button
-                type="button"
-                onClick={handleClose}
-                className="absolute top-2 right-2 z-10 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-black/50 transition-colors hover:bg-black/70"
+            {/* Selection ring */}
+            {isSelected && (
+              <div className="bg-blue/30 absolute inset-0 -m-2 animate-pulse rounded-full" />
+            )}
+
+            {/* Photo background preview */}
+            <div className="absolute inset-0 overflow-hidden rounded-full">
+              <LazyImage
+                src={marker.photo.thumbnailUrl || marker.photo.originalUrl}
+                alt={marker.photo.title || marker.photo.id}
+                thumbHash={marker.photo.thumbHash}
+                className="h-full w-full object-cover opacity-40"
+                rootMargin="100px"
+                threshold={0.1}
+              />
+              {/* Overlay */}
+              <div className="from-green/60 to-emerald/80 dark:from-green/70 dark:to-emerald/90 absolute inset-0 bg-gradient-to-br" />
+            </div>
+
+            {/* Main marker container */}
+            <div
+              className={`relative flex h-10 w-10 items-center justify-center rounded-full border shadow-lg backdrop-blur-md transition-all duration-300 hover:shadow-xl ${
+                isSelected
+                  ? 'border-blue/40 bg-blue/90 shadow-blue/50 dark:border-blue/30 dark:bg-blue/80'
+                  : 'border-white/40 bg-white/95 hover:bg-white dark:border-white/20 dark:bg-black/80 dark:hover:bg-black/90'
+              }`}
+            >
+              {/* Glass morphism overlay */}
+              <div className="absolute inset-0 rounded-full bg-gradient-to-br from-white/30 to-white/10 dark:from-white/20 dark:to-white/5" />
+
+              {/* Camera icon */}
+              <i
+                className={`i-mingcute-camera-line relative z-10 text-lg drop-shadow-sm ${
+                  isSelected ? 'text-white' : 'text-gray-700 dark:text-white'
+                }`}
+              />
+
+              {/* Subtle inner shadow for depth */}
+              <div className="absolute inset-0 rounded-full shadow-inner shadow-black/5" />
+            </div>
+          </m.div>
+        </HoverCardTrigger>
+
+        <HoverCardContent
+          className="w-80 overflow-hidden border-white/20 bg-white/95 p-0 backdrop-blur-[120px] dark:bg-black/95"
+          side="top"
+          align="center"
+          sideOffset={8}
+        >
+          <div className="relative">
+            {/* Photo header */}
+            <div className="relative h-32 overflow-hidden">
+              <LazyImage
+                src={marker.photo.thumbnailUrl || marker.photo.originalUrl}
+                alt={marker.photo.title || marker.photo.id}
+                thumbHash={marker.photo.thumbHash}
+                className="h-full w-full object-cover"
+                rootMargin="200px"
+                threshold={0.1}
+              />
+              {/* Gradient overlay */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
+            </div>
+
+            {/* Content */}
+            <div className="space-y-3 p-4">
+              {/* Title with link */}
+              <Link
+                to={`/${marker.photo.id}`}
+                target="_blank"
+                className="group/link hover:text-blue flex items-center gap-2 transition-colors"
               >
-                <span className="sr-only">Close</span>
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="h-5 w-5 text-white"
+                <h3
+                  className="text-text flex-1 truncate text-sm font-semibold"
+                  title={marker.photo.title || marker.photo.id}
                 >
-                  <path d="M18 6L6 18M6 6l12 12" />
-                </svg>
-              </button>
+                  {marker.photo.title || marker.photo.id}
+                </h3>
+                <i className="i-mingcute-arrow-right-line text-text-secondary transition-transform group-hover/link:translate-x-0.5" />
+              </Link>
 
-              {/* Photo */}
-              <div className="relative overflow-hidden rounded-t-lg">
-                <LazyImage
-                  src={marker.photo.thumbnailUrl || marker.photo.originalUrl}
-                  alt={marker.photo.title || marker.photo.id}
-                  thumbHash={marker.photo.thumbHash}
-                  className="h-32 w-full"
-                  rootMargin="200px"
-                  threshold={0.1}
-                />
-              </div>
-
-              {/* Info */}
-              <div className="flex flex-col gap-2 p-4">
-                <Link to={`/${marker.photo.id}`} target="_blank">
-                  <h3
-                    className="truncate text-sm font-semibold text-gray-900 dark:text-gray-100"
-                    title={marker.photo.title || marker.photo.id}
-                  >
-                    {marker.photo.title || marker.photo.id}
-                    <i className="i-mingcute-link-2-fill ml-1 text-xs text-gray-500" />
-                  </h3>
-                </Link>
-
+              {/* Metadata */}
+              <div className="space-y-2">
                 {marker.photo.exif?.DateTimeOriginal && (
-                  <p className="inline-flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400">
-                    <i className="i-mingcute-calendar-2-line" />
-                    {new Date(
-                      marker.photo.exif.DateTimeOriginal,
-                    ).toLocaleDateString()}
-                  </p>
+                  <div className="text-text-secondary flex items-center gap-2 text-xs">
+                    <i className="i-mingcute-calendar-line text-sm" />
+                    <span>
+                      {new Date(
+                        marker.photo.exif.DateTimeOriginal,
+                      ).toLocaleDateString('zh-CN', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                      })}
+                    </span>
+                  </div>
                 )}
 
                 {marker.photo.exif?.Make && marker.photo.exif?.Model && (
-                  <p className="inline-flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400">
-                    <i className="i-mingcute-camera-2-line" />
-                    {marker.photo.exif.Make} {marker.photo.exif.Model}
-                  </p>
+                  <div className="text-text-secondary flex items-center gap-2 text-xs">
+                    <i className="i-mingcute-camera-line text-sm" />
+                    <span className="truncate">
+                      {marker.photo.exif.Make} {marker.photo.exif.Model}
+                    </span>
+                  </div>
                 )}
 
-                <p className="inline-flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400">
-                  <i className="i-mingcute-map-line" />
-                  {marker.latitude.toFixed(6)}, {marker.longitude.toFixed(6)}
-                </p>
-              </div>
-
-              {/* Arrow pointing to marker */}
-              <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 transform">
-                <div className="h-4 w-4 rotate-45 bg-white dark:bg-gray-800" />
+                <div className="text-text-secondary space-y-1 text-xs">
+                  <div className="flex items-center gap-2">
+                    <i className="i-mingcute-location-line text-sm" />
+                    <span className="font-mono">
+                      {Math.abs(marker.latitude).toFixed(4)}°
+                      {marker.latitudeRef || 'N'},{' '}
+                      {Math.abs(marker.longitude).toFixed(4)}°
+                      {marker.longitudeRef || 'E'}
+                    </span>
+                  </div>
+                  {marker.altitude !== undefined && (
+                    <div className="flex items-center gap-2">
+                      <i className="i-mingcute-mountain-2-line text-sm" />
+                      <span className="font-mono">
+                        {marker.altitudeRef === 'Below Sea Level' ? '-' : ''}
+                        {Math.abs(marker.altitude).toFixed(1)}m
+                      </span>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
-          </m.div>
-        )}
-      </div>
+          </div>
+        </HoverCardContent>
+      </HoverCard>
+
+      {/* Enhanced popup for selected state */}
+      {isSelected && (
+        <m.div
+          className="absolute -top-80 left-1/2 z-50 -translate-x-1/2 transform"
+          initial={{ y: 20, opacity: 0, scale: 0.9 }}
+          animate={{ y: 0, opacity: 1, scale: 1 }}
+          exit={{ y: 20, opacity: 0, scale: 0.9 }}
+          transition={{ duration: 0.3, ease: 'easeOut' }}
+        >
+          <div className="border-fill-tertiary bg-material-thick relative w-72 cursor-default overflow-hidden rounded-xl border shadow-2xl backdrop-blur-[80px]">
+            {/* Close button */}
+            <GlassButton
+              className="absolute top-3 right-3 z-10 size-8"
+              onClick={handleClose}
+            >
+              <i className="i-mingcute-close-line text-lg" />
+            </GlassButton>
+
+            {/* Photo container */}
+            <div className="relative overflow-hidden">
+              <LazyImage
+                src={marker.photo.thumbnailUrl || marker.photo.originalUrl}
+                alt={marker.photo.title || marker.photo.id}
+                thumbHash={marker.photo.thumbHash}
+                className="h-40 w-full object-cover"
+                rootMargin="200px"
+                threshold={0.1}
+              />
+              {/* Gradient overlay */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+            </div>
+
+            {/* Content */}
+            <div className="flex flex-col gap-3 p-4">
+              {/* Title with link */}
+              <Link
+                to={`/${marker.photo.id}`}
+                target="_blank"
+                className="group/link hover:text-blue flex items-center gap-2 transition-colors"
+              >
+                <h3
+                  className="text-text flex-1 truncate text-base font-semibold"
+                  title={marker.photo.title || marker.photo.id}
+                >
+                  {marker.photo.title || marker.photo.id}
+                </h3>
+                <i className="i-mingcute-arrow-right-line" />
+              </Link>
+
+              {/* Metadata */}
+              <div className="space-y-2">
+                {marker.photo.exif?.DateTimeOriginal && (
+                  <div className="text-text-secondary flex items-center gap-2 text-sm">
+                    <i className="i-mingcute-calendar-line" />
+                    <span className="text-xs">
+                      {new Date(
+                        marker.photo.exif.DateTimeOriginal,
+                      ).toLocaleDateString('zh-CN', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                      })}
+                    </span>
+                  </div>
+                )}
+
+                {marker.photo.exif?.Make && marker.photo.exif?.Model && (
+                  <div className="text-text-secondary flex items-center gap-2 text-sm">
+                    <i className="i-mingcute-camera-line" />
+                    <span className="truncate text-xs">
+                      {marker.photo.exif.Make} {marker.photo.exif.Model}
+                    </span>
+                  </div>
+                )}
+
+                <div className="text-text-secondary space-y-1 text-sm">
+                  <div className="flex items-center gap-2">
+                    <i className="i-mingcute-location-line" />
+                    <span className="font-mono text-xs">
+                      {Math.abs(marker.latitude).toFixed(6)}°
+                      {marker.latitudeRef || 'N'},{' '}
+                      {Math.abs(marker.longitude).toFixed(6)}°
+                      {marker.longitudeRef || 'E'}
+                    </span>
+                  </div>
+                  {marker.altitude !== undefined && (
+                    <div className="flex items-center gap-2">
+                      <i className="i-mingcute-mountain-2-line" />
+                      <span className="font-mono text-xs">
+                        {marker.altitudeRef === 'Below Sea Level' ? '-' : ''}
+                        {Math.abs(marker.altitude).toFixed(1)}m
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </m.div>
+      )}
     </Marker>
   )
 }

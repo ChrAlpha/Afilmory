@@ -1,5 +1,4 @@
 import { photoLoader } from '@afilmory/data'
-import { siteConfig } from '@config'
 import { useAtomValue, useSetAtom } from 'jotai'
 // import { AnimatePresence } from 'motion/react'
 import { useEffect, useRef } from 'react'
@@ -27,20 +26,6 @@ export const Component = () => {
 
   return (
     <>
-      {siteConfig.accentColor && (
-        <style
-          dangerouslySetInnerHTML={{
-            __html: `
-          :root:has(input.theme-controller[value=dark]:checked), [data-theme="dark"] {
-            --color-primary: ${siteConfig.accentColor};
-            --color-accent: ${siteConfig.accentColor};
-            --color-secondary: ${siteConfig.accentColor};
-          }
-          `,
-          }}
-        />
-      )}
-
       {isMobile ? (
         <ScrollElementContext value={document.body}>
           <MasonryRoot />
@@ -54,9 +39,6 @@ export const Component = () => {
         </ScrollArea>
       )}
 
-      {/* <AnimatePresence mode="wait">
-        <Outlet key={location.pathname} />
-      </AnimatePresence> */}
       <Outlet />
     </>
   )

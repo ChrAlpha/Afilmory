@@ -1,23 +1,19 @@
 import { m } from 'motion/react'
-import { Suspense } from 'react'
+import { lazy, Suspense } from 'react'
 import { ErrorBoundary } from 'react-error-boundary'
 import { useTranslation } from 'react-i18next'
-import { RemoveScroll } from 'react-remove-scroll'
 
-import { RootPortal } from '~/components/ui/portal'
-import { MapSection } from '~/modules/map/MapSection'
+const MapSection = lazy(() =>
+  import('~/modules/map/MapSection').then((m) => ({ default: m.MapSection })),
+)
 
 export const Component = () => {
   return (
-    <RootPortal>
-      <RemoveScroll className="fixed inset-0 z-[9999]">
-        <Suspense fallback={<ExploryPageSkeleton />}>
-          <ErrorBoundary fallback={<ExploryPageError />}>
-            <MapSection />
-          </ErrorBoundary>
-        </Suspense>
-      </RemoveScroll>
-    </RootPortal>
+    <Suspense fallback={<ExploryPageSkeleton />}>
+      <ErrorBoundary fallback={<ExploryPageError />}>
+        <MapSection />
+      </ErrorBoundary>
+    </Suspense>
   )
 }
 

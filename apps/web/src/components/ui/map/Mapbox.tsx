@@ -469,9 +469,25 @@ const PhotoMarkerPin = ({
                   </p>
                 )}
 
-                <p className="text-xs text-gray-500 dark:text-gray-500">
-                  📍 {marker.latitude.toFixed(6)}, {marker.longitude.toFixed(6)}
-                </p>
+                <div className="space-y-1 text-xs text-gray-500 dark:text-gray-500">
+                  <p>
+                    📍 {Math.abs(marker.latitude).toFixed(6)}°
+                    {marker.latitudeRef || 'N'},{' '}
+                    {Math.abs(marker.longitude).toFixed(6)}°
+                    {marker.longitudeRef || 'E'}
+                  </p>
+                  {marker.altitude !== undefined && (
+                    <p>
+                      🏔️ {marker.altitudeRef === 'Below Sea Level' ? '-' : ''}
+                      {Math.abs(marker.altitude).toFixed(1)}m
+                      <span className="ml-1 text-gray-400 dark:text-gray-600">
+                        {marker.altitudeRef === 'Below Sea Level'
+                          ? '海平面以下'
+                          : '海拔'}
+                      </span>
+                    </p>
+                  )}
+                </div>
               </div>
 
               {/* Arrow pointing to marker */}

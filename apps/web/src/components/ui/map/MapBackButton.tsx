@@ -1,9 +1,8 @@
-import { m } from 'motion/react'
 import { startTransition } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router'
 
-import { Button } from '~/components/ui/button'
+import { GlassButton } from '../button/GlassButton'
 
 export const MapBackButton = () => {
   const { t } = useTranslation()
@@ -16,21 +15,12 @@ export const MapBackButton = () => {
   }
 
   return (
-    <m.div
+    <GlassButton
       className="absolute top-4 left-4 z-50"
-      initial={{ opacity: 0, x: -20 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ duration: 0.4, delay: 0.2 }}
+      onClick={handleBack}
+      title={t('explory.back.to.gallery')}
     >
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={handleBack}
-        className="h-10 w-10 rounded-full border border-white/20 bg-black/50 backdrop-blur-sm transition-all duration-200 hover:bg-black/70"
-        title={t('explory.back.to.gallery')}
-      >
-        <i className="i-mingcute-arrow-left-line text-base text-white" />
-      </Button>
-    </m.div>
+      <i className="i-mingcute-arrow-left-line text-base text-white" />
+    </GlassButton>
   )
 }

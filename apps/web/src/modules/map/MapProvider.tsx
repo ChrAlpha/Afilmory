@@ -15,6 +15,7 @@ export interface MapAdapter {
   isAvailable: boolean
   initialize: () => Promise<void>
   cleanup?: () => void
+
   MapComponent: React.FC<BaseMapProps>
 }
 
