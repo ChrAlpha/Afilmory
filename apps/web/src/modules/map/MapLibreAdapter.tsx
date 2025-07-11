@@ -42,6 +42,7 @@ export const MapLibreMapComponent: React.FC<BaseMapProps> = ({
   style,
   handlers,
   autoFitBounds,
+  selectedMarkerId,
 }) => {
   const mapRef = React.useRef<MapRef>(null)
 
@@ -86,6 +87,11 @@ export const MapLibreMapComponent: React.FC<BaseMapProps> = ({
     [handlers],
   )
 
+  // Handle marker close
+  const handleMarkerClose = React.useCallback(() => {
+    handlers?.onMarkerClose?.()
+  }, [handlers])
+
   // Handle geolocate
   const handleGeolocate = React.useCallback(
     (longitude: number, latitude: number) => {
@@ -102,12 +108,14 @@ export const MapLibreMapComponent: React.FC<BaseMapProps> = ({
       markers={markers}
       geoJsonData={geoJsonData}
       onMarkerClick={handleMarkerClick}
+      onMarkerClose={handleMarkerClose}
       onGeoJsonClick={handleGeoJsonClick}
       onGeolocate={handleGeolocate}
       className={className}
       style={style}
       mapRef={mapRef}
       autoFitBounds={autoFitBounds}
+      selectedMarkerId={selectedMarkerId}
     />
   )
 }

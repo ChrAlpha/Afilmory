@@ -111,6 +111,7 @@ const MapSectionContent = () => {
           markers={markers}
           initialViewState={initialViewState}
           className="h-full w-full"
+          enableUrlSync={true}
         />
       </m.div>
     </div>

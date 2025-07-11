@@ -29,6 +29,7 @@ export interface PureMaplibreProps {
   markers?: PhotoMarker[]
   geoJsonData?: GeoJSON.FeatureCollection
   onMarkerClick?: (marker: PhotoMarker) => void
+  onMarkerClose?: () => void
   onGeoJsonClick?: (event: any) => void
   onGeolocate?: (longitude: number, latitude: number) => void
   onClusterClick?: (longitude: number, latitude: number) => void
@@ -36,6 +37,7 @@ export interface PureMaplibreProps {
   style?: React.CSSProperties
   mapRef?: React.RefObject<any>
   autoFitBounds?: boolean
+  selectedMarkerId?: string | null
 }
 
 export const Maplibre = ({
@@ -44,6 +46,7 @@ export const Maplibre = ({
   markers = DEFAULT_MARKERS,
   geoJsonData,
   onMarkerClick,
+  onMarkerClose,
   onGeoJsonClick,
   onGeolocate,
   onClusterClick,
@@ -51,17 +54,29 @@ export const Maplibre = ({
   style = DEFAULT_STYLE,
   mapRef,
   autoFitBounds = true,
+  selectedMarkerId,
 }: PureMaplibreProps) => {
-  const [selectedMarkerId, setSelectedMarkerId] = useState<string | null>(null)
+  const [selectedMarkerIdState, setSelectedMarkerIdState] = useState<
+    string | null
+  >(selectedMarkerId || null)
   const [currentZoom, setCurrentZoom] = useState(initialViewState.zoom)
   const [viewState, setViewState] = useState(initialViewState)
   const [isMapLoaded, setIsMapLoaded] = useState(false)
+
+  // Sync external selectedMarkerId with internal state
+  useEffect(() => {
+    if (selectedMarkerId !== undefined) {
+      setSelectedMarkerIdState(selectedMarkerId)
+    }
+  }, [selectedMarkerId])
 
   // Handle marker click
   const handleMarkerClick = useCallback(
     (marker: PhotoMarker) => {
       // Toggle selection: if already selected, deselect; otherwise select
-      setSelectedMarkerId((prev) => (prev === marker.id ? null : marker.id))
+      setSelectedMarkerIdState((prev) =>
+        prev === marker.id ? null : marker.id,
+      )
       onMarkerClick?.(marker)
     },
     [onMarkerClick],
@@ -69,8 +84,9 @@ export const Maplibre = ({
 
   // Handle marker close
   const handleMarkerClose = useCallback(() => {
-    setSelectedMarkerId(null)
-  }, [])
+    setSelectedMarkerIdState(null)
+    onMarkerClose?.()
+  }, [onMarkerClose])
 
   // Clustered markers
   const clusteredMarkers = useMemo(
@@ -92,7 +108,13 @@ export const Maplibre = ({
 
   // 自动适配到包含所有照片的区域
   const fitMapToBounds = useCallback(() => {
-    if (!autoFitBounds || markers.length === 0 || !isMapLoaded) return
+    if (
+      !autoFitBounds ||
+      markers.length === 0 ||
+      !isMapLoaded ||
+      selectedMarkerId
+    )
+      return
 
     const bounds = calculateMapBounds(markers)
     if (!bounds) return
@@ -177,9 +199,8 @@ export const Maplibre = ({
     setIsMapLoaded(true)
   }, [])
 
-  // 当标记点变化时，重新适配边界
+  // 当标记点变化时，重新适配边界（但不包括选中状态变化）
   useEffect(() => {
-    // 延迟执行，确保地图已渲染
     const timer = setTimeout(() => {
       fitMapToBounds()
     }, 100)
@@ -232,7 +253,7 @@ export const Maplibre = ({
               <PhotoMarkerPin
                 key={marker.id}
                 marker={marker}
-                isSelected={selectedMarkerId === marker.id}
+                isSelected={selectedMarkerIdState === marker.id}
                 onClick={handleMarkerClick}
                 onClose={handleMarkerClose}
               />

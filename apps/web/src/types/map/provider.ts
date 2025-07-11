@@ -21,6 +21,7 @@ export interface MapProvider {
  */
 export interface MapHandlers {
   onMarkerClick?: (marker: PhotoMarker) => void
+  onMarkerClose?: () => void
   onGeoJsonClick?: (feature: GeoJSON.Feature) => void
   onGeolocate?: (longitude: number, latitude: number) => void
   onPopupClose?: () => void
@@ -40,6 +41,7 @@ export interface BaseMapProps {
   showGeocoder?: boolean
   handlers?: MapHandlers
   autoFitBounds?: boolean
+  selectedMarkerId?: string | null
 }
 
 /**
