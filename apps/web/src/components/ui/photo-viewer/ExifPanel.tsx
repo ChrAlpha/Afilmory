@@ -310,13 +310,13 @@ export const ExifPanel: FC<{
                   <h4 className="my-2 text-sm font-medium text-white/80">
                     {t('exif.device.info')}
                   </h4>
-                  <div className="space-y-2 text-sm">
+                  <div className="space-y-1 text-sm">
                     {formattedExifData.camera && (
-                      <div>
-                        <span className="mb-1 block text-xs text-white/70">
+                      <div className="flex justify-between gap-4 text-sm">
+                        <span className="text-text-secondary shrink-0">
                           {t('exif.camera')}
                         </span>
-                        <MotionButtonBase
+                        <button
                           type="button"
                           onClick={() => {
                             window.open(
@@ -325,19 +325,18 @@ export const ExifPanel: FC<{
                               'noopener,noreferrer',
                             )
                           }}
-                          className="bg-material-medium hover:bg-material-thin inline-flex cursor-pointer items-center rounded-full px-3 py-1.5 text-xs text-white/90 backdrop-blur-sm transition-colors"
+                          className="text-text min-w-0 cursor-pointer border-b border-dashed border-white/30 text-right hover:border-white/60"
                         >
-                          <i className="i-mingcute-camera-line mr-1.5 text-white/70" />
                           {formattedExifData.camera}
-                        </MotionButtonBase>
+                        </button>
                       </div>
                     )}
                     {formattedExifData.lens && (
-                      <div>
-                        <span className="mb-1 block text-xs text-white/70">
+                      <div className="flex justify-between gap-4 text-sm">
+                        <span className="text-text-secondary shrink-0">
                           {t('exif.lens')}
                         </span>
-                        <MotionButtonBase
+                        <button
                           type="button"
                           onClick={() => {
                             window.open(
@@ -346,11 +345,10 @@ export const ExifPanel: FC<{
                               'noopener,noreferrer',
                             )
                           }}
-                          className="bg-material-medium hover:bg-material-thin inline-flex cursor-pointer items-center rounded-full px-3 py-1.5 text-xs text-white/90 backdrop-blur-sm transition-colors"
+                          className="text-text min-w-0 cursor-pointer border-b border-dashed border-white/30 text-right hover:border-white/60"
                         >
-                          <StreamlineImageAccessoriesLensesPhotosCameraShutterPicturePhotographyPicturesPhotoLens className="mr-1.5 text-white/70" />
                           {formattedExifData.lens}
-                        </MotionButtonBase>
+                        </button>
                       </div>
                     )}
                     {formattedExifData.lensMake &&
