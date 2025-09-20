@@ -32,12 +32,40 @@ import { ProgressiveImage } from './ProgressiveImage'
 import { ReactionButton } from './Reaction'
 import { SharePanel } from './SharePanel'
 
+const escapeAttributeValue = (value: string) => {
+  if (typeof window !== 'undefined' && window.CSS?.escape) {
+    return window.CSS.escape(value)
+  }
+
+  return value.replaceAll(/['\\]/g, '\\$&')
+}
+
 interface PhotoViewerProps {
   photos: PhotoManifest[]
   currentIndex: number
   isOpen: boolean
   onClose: () => void
   onIndexChange: (index: number) => void
+  triggerElement: HTMLElement | null
+}
+
+type ExitAnimationState = {
+  photoId: string
+  imageSrc: string
+  thumbHash?: string | null
+  from: {
+    left: number
+    top: number
+    width: number
+    height: number
+  }
+  to: {
+    left: number
+    top: number
+    width: number
+    height: number
+    borderRadius: number
+  }
 }
 
 export const PhotoViewer = ({
@@ -46,6 +74,7 @@ export const PhotoViewer = ({
   isOpen,
   onClose,
   onIndexChange,
+  triggerElement,
 }: PhotoViewerProps) => {
   const { t } = useTranslation()
   const containerRef = useRef<HTMLDivElement>(null)
@@ -53,9 +82,191 @@ export const PhotoViewer = ({
   const [isImageZoomed, setIsImageZoomed] = useState(false)
   const [showExifPanel, setShowExifPanel] = useState(false)
   const [currentBlobSrc, setCurrentBlobSrc] = useState<string | null>(null)
+  const [exitAnimation, setExitAnimation] = useState<ExitAnimationState | null>(
+    null,
+  )
+  const cachedTriggerRef = useRef<HTMLElement | null>(triggerElement)
+  const wasOpenRef = useRef(isOpen)
+  const viewerBoundsRef = useRef<DOMRect | null>(null)
+  const exitAnimationTriggerRef = useRef<HTMLElement | null>(null)
+  const triggerPrevVisibilityRef = useRef<string | null>(null)
+
+  const restoreTriggerElementVisibility = useCallback(() => {
+    const trigger = exitAnimationTriggerRef.current
+    if (trigger) {
+      const prevVisibility = triggerPrevVisibilityRef.current
+      if (prevVisibility !== null && prevVisibility !== undefined) {
+        trigger.style.visibility = prevVisibility
+      } else {
+        trigger.style.removeProperty('visibility')
+      }
+    }
+    exitAnimationTriggerRef.current = null
+    triggerPrevVisibilityRef.current = null
+  }, [])
+
+  const handleExitAnimationComplete = useCallback(() => {
+    restoreTriggerElementVisibility()
+    setExitAnimation(null)
+  }, [restoreTriggerElementVisibility])
   const isMobile = useMobile()
 
   const currentPhoto = photos[currentIndex]
+
+  useEffect(() => {
+    if (triggerElement) {
+      cachedTriggerRef.current = triggerElement
+    }
+  }, [triggerElement])
+
+  useEffect(() => {
+    if (!isOpen || !currentPhoto) return
+    if (typeof document === 'undefined') return
+
+    const selector = `[data-photo-id='${escapeAttributeValue(currentPhoto.id)}']`
+    const liveTriggerEl = document.querySelector<HTMLElement>(selector)
+    if (liveTriggerEl) {
+      cachedTriggerRef.current = liveTriggerEl
+    }
+  }, [isOpen, currentPhoto])
+
+  useEffect(() => {
+    if (isOpen) {
+      wasOpenRef.current = true
+      restoreTriggerElementVisibility()
+      setExitAnimation(null)
+      return
+    }
+
+    if (!wasOpenRef.current || !currentPhoto) {
+      wasOpenRef.current = false
+      restoreTriggerElementVisibility()
+      return
+    }
+
+    if (typeof window === 'undefined') {
+      wasOpenRef.current = false
+      restoreTriggerElementVisibility()
+      return
+    }
+
+    const selector = `[data-photo-id='${escapeAttributeValue(currentPhoto.id)}']`
+    const liveTriggerEl =
+      typeof document === 'undefined'
+        ? null
+        : document.querySelector<HTMLElement>(selector)
+
+    const triggerEl = liveTriggerEl ?? cachedTriggerRef.current
+
+    if (liveTriggerEl && liveTriggerEl !== cachedTriggerRef.current) {
+      cachedTriggerRef.current = liveTriggerEl
+    }
+
+    if (!triggerEl || !triggerEl.isConnected) {
+      wasOpenRef.current = false
+      restoreTriggerElementVisibility()
+      setExitAnimation(null)
+      return
+    }
+
+    const targetRect = triggerEl.getBoundingClientRect()
+    if (!targetRect.width || !targetRect.height) {
+      wasOpenRef.current = false
+      restoreTriggerElementVisibility()
+      setExitAnimation(null)
+      return
+    }
+
+    const viewportRect = viewerBoundsRef.current
+    const viewportWidth = viewportRect?.width ?? window.innerWidth
+    const viewportHeight = viewportRect?.height ?? window.innerHeight
+    const viewportLeft = viewportRect?.left ?? 0
+    const viewportTop = viewportRect?.top ?? 0
+
+    const photoWidth = currentPhoto.width || viewportWidth
+    const photoHeight = currentPhoto.height || viewportHeight
+    if (!photoWidth || !photoHeight) {
+      wasOpenRef.current = false
+      restoreTriggerElementVisibility()
+      setExitAnimation(null)
+      return
+    }
+
+    const photoAspect = photoWidth / photoHeight
+    let displayWidth = viewportWidth
+    let displayHeight = viewportWidth / photoAspect
+
+    if (displayHeight > viewportHeight) {
+      displayHeight = viewportHeight
+      displayWidth = viewportHeight * photoAspect
+    }
+
+    const startLeft = viewportLeft + (viewportWidth - displayWidth) / 2
+    const startTop = viewportTop + (viewportHeight - displayHeight) / 2
+
+    const elementForStyle =
+      triggerEl instanceof HTMLImageElement && triggerEl.parentElement
+        ? triggerEl.parentElement
+        : triggerEl
+
+    const computedStyle = window.getComputedStyle(elementForStyle)
+    const radiusCandidates = [
+      computedStyle.borderRadius,
+      computedStyle.borderTopLeftRadius,
+      computedStyle.borderTopRightRadius,
+    ].find(Boolean)
+    const borderRadiusRaw = radiusCandidates
+      ? Number.parseFloat(radiusCandidates)
+      : 0
+    const borderRadius = Number.isNaN(borderRadiusRaw)
+      ? 0
+      : Math.max(0, borderRadiusRaw)
+
+    const imageSrc =
+      currentBlobSrc ||
+      currentPhoto.thumbnailUrl ||
+      currentPhoto.originalUrl ||
+      null
+
+    if (!imageSrc) {
+      wasOpenRef.current = false
+      restoreTriggerElementVisibility()
+      setExitAnimation(null)
+      return
+    }
+
+    restoreTriggerElementVisibility()
+    exitAnimationTriggerRef.current = triggerEl
+    triggerPrevVisibilityRef.current = triggerEl.style.visibility || null
+    triggerEl.style.visibility = 'hidden'
+
+    setExitAnimation({
+      photoId: currentPhoto.id,
+      imageSrc,
+      thumbHash: currentPhoto.thumbHash,
+      from: {
+        left: startLeft,
+        top: startTop,
+        width: displayWidth,
+        height: displayHeight,
+      },
+      to: {
+        left: targetRect.left,
+        top: targetRect.top,
+        width: targetRect.width,
+        height: targetRect.height,
+        borderRadius,
+      },
+    })
+
+    wasOpenRef.current = false
+  }, [isOpen, currentPhoto, currentBlobSrc, restoreTriggerElementVisibility])
+
+  useEffect(() => {
+    return () => {
+      restoreTriggerElementVisibility()
+    }
+  }, [restoreTriggerElementVisibility])
 
   // 当 PhotoViewer 关闭时重置缩放状态和面板状态
   useLayoutEffect(() => {
@@ -63,6 +274,23 @@ export const PhotoViewer = ({
       setIsImageZoomed(false)
       setShowExifPanel(false)
       setCurrentBlobSrc(null)
+    }
+  }, [isOpen])
+
+  useLayoutEffect(() => {
+    if (!isOpen) return
+
+    const updateBounds = () => {
+      if (containerRef.current) {
+        viewerBoundsRef.current = containerRef.current.getBoundingClientRect()
+      }
+    }
+
+    updateBounds()
+    window.addEventListener('resize', updateBounds)
+
+    return () => {
+      window.removeEventListener('resize', updateBounds)
     }
   }, [isOpen])
 
@@ -145,13 +373,20 @@ export const PhotoViewer = ({
 
   if (!currentPhoto) return null
 
+  const shouldRenderBackdrop = isOpen || Boolean(exitAnimation)
+  const currentThumbHash =
+    typeof currentPhoto.thumbHash === 'string' ? currentPhoto.thumbHash : null
+  const shouldRenderThumbhash =
+    shouldRenderBackdrop && Boolean(currentThumbHash)
+
   return (
     <>
       <AnimatePresence>
-        {isOpen && (
+        {shouldRenderBackdrop && (
           <m.div
+            key="photo-viewer-backdrop"
             initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
+            animate={{ opacity: isOpen ? 1 : 0 }}
             exit={{ opacity: 0 }}
             transition={Spring.presets.snappy}
             className="bg-material-opaque fixed inset-0"
@@ -161,19 +396,21 @@ export const PhotoViewer = ({
       {/* 固定背景层防止透出 */}
       {/* 交叉溶解的 Blurhash 背景 */}
       <AnimatePresence mode="sync">
-        {isOpen && currentPhoto.thumbHash && (
+        {shouldRenderThumbhash && (
           <m.div
-            key={currentPhoto.id}
+            key={`${currentPhoto.id}-thumbhash`}
             initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
+            animate={{ opacity: isOpen ? 1 : 0 }}
             exit={{ opacity: 0 }}
             transition={Spring.presets.snappy}
             className="fixed inset-0"
           >
-            <Thumbhash
-              thumbHash={currentPhoto.thumbHash}
-              className="size-fill scale-110"
-            />
+            {currentThumbHash && (
+              <Thumbhash
+                thumbHash={currentThumbHash}
+                className="size-fill scale-110"
+              />
+            )}
           </m.div>
         )}
       </AnimatePresence>
@@ -379,6 +616,13 @@ export const PhotoViewer = ({
           </div>
         )}
       </AnimatePresence>
+      {exitAnimation && (
+        <ExitAnimationPreview
+          key={exitAnimation.photoId}
+          data={exitAnimation}
+          onComplete={handleExitAnimationComplete}
+        />
+      )}
     </>
   )
 }
@@ -391,4 +635,54 @@ const AnimatePresenceOnlyMobile = ({
   const isMobile = useMobile()
   if (!isMobile) return children
   return <AnimatePresence>{children}</AnimatePresence>
+}
+
+function ExitAnimationPreview({
+  data,
+  onComplete,
+}: {
+  data: ExitAnimationState
+  onComplete: () => void
+}) {
+  const baseTransition = Spring.snappy(0.45)
+  const thumbHash = typeof data.thumbHash === 'string' ? data.thumbHash : null
+
+  return (
+    <m.div
+      className="pointer-events-none fixed top-0 left-0 z-[80]"
+      initial={{
+        x: data.from.left,
+        y: data.from.top,
+        width: data.from.width,
+        height: data.from.height,
+        borderRadius: 0,
+        opacity: 1,
+      }}
+      animate={{
+        x: data.to.left,
+        y: data.to.top,
+        width: data.to.width,
+        height: data.to.height,
+        borderRadius: data.to.borderRadius,
+        opacity: 1,
+      }}
+      transition={baseTransition}
+      onAnimationComplete={onComplete}
+    >
+      <div className="relative h-full w-full overflow-hidden bg-black">
+        {thumbHash && (
+          <Thumbhash
+            thumbHash={thumbHash}
+            className="pointer-events-none absolute inset-0 h-full w-full"
+          />
+        )}
+        <img
+          src={data.imageSrc}
+          alt=""
+          className="absolute inset-0 h-full w-full object-cover"
+          draggable={false}
+        />
+      </div>
+    </m.div>
+  )
 }
