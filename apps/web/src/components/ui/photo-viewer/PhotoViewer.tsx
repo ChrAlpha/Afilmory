@@ -9,7 +9,6 @@ import {
   Suspense,
   useCallback,
   useEffect,
-  useLayoutEffect,
   useRef,
   useState,
 } from 'react'
@@ -24,6 +23,8 @@ import { Spring } from '~/lib/spring'
 import type { PhotoManifest } from '~/types/photo'
 
 import { Thumbhash } from '../thumbhash'
+import { PhotoViewerTransitionPreview } from './animations/PhotoViewerTransitionPreview'
+import { usePhotoViewerTransitions } from './animations/usePhotoViewerTransitions'
 import { ExifPanel } from './ExifPanel'
 import { GalleryThumbnail } from './GalleryThumbnail'
 import type { LoadingIndicatorRef } from './LoadingIndicator'
@@ -32,14 +33,6 @@ import { ProgressiveImage } from './ProgressiveImage'
 import { ReactionButton } from './Reaction'
 import { SharePanel } from './SharePanel'
 
-const escapeAttributeValue = (value: string) => {
-  if (typeof window !== 'undefined' && window.CSS?.escape) {
-    return window.CSS.escape(value)
-  }
-
-  return value.replaceAll(/['\\]/g, '\\$&')
-}
-
 interface PhotoViewerProps {
   photos: PhotoManifest[]
   currentIndex: number
@@ -47,106 +40,6 @@ interface PhotoViewerProps {
   onClose: () => void
   onIndexChange: (index: number) => void
   triggerElement: HTMLElement | null
-}
-
-type AnimationFrameRect = {
-  left: number
-  top: number
-  width: number
-  height: number
-  borderRadius: number
-}
-
-type ExitAnimationState = {
-  photoId: string
-  imageSrc: string
-  thumbHash?: string | null
-  from: AnimationFrameRect
-  to: AnimationFrameRect
-}
-
-type EntryAnimationState = {
-  photoId: string
-  imageSrc: string
-  thumbHash?: string | null
-  from: AnimationFrameRect
-  to: AnimationFrameRect
-}
-
-const getBorderRadius = (element: Element | null) => {
-  if (typeof window === 'undefined' || !element) return 0
-
-  const computedStyle = window.getComputedStyle(element)
-  const radiusCandidates = [
-    computedStyle.borderRadius,
-    computedStyle.borderTopLeftRadius,
-    computedStyle.borderTopRightRadius,
-  ].filter((value) => value && value !== '0px')
-
-  if (radiusCandidates.length === 0) return 0
-
-  const parsed = Number.parseFloat(radiusCandidates[0] || '0')
-  if (Number.isNaN(parsed)) return 0
-  return Math.max(0, parsed)
-}
-
-const DESKTOP_EXIF_PANEL_WIDTH_REM = 20
-const THUMBNAIL_SIZE = {
-  mobile: 48,
-  desktop: 64,
-} as const
-const THUMBNAIL_PADDING = {
-  mobile: 12,
-  desktop: 16,
-} as const
-
-const getRootFontSize = () => {
-  if (typeof window === 'undefined') return 16
-  const value = window.getComputedStyle(document.documentElement).fontSize
-  const parsed = Number.parseFloat(value || '16')
-  return Number.isNaN(parsed) ? 16 : parsed
-}
-
-const computeViewerImageFrame = (
-  photo: PhotoManifest,
-  viewportRect: DOMRect | null,
-  isMobile: boolean,
-) => {
-  const baseFontSize = getRootFontSize()
-  const exifWidth = isMobile ? 0 : DESKTOP_EXIF_PANEL_WIDTH_REM * baseFontSize
-  const thumbnailHeight = isMobile
-    ? THUMBNAIL_SIZE.mobile + THUMBNAIL_PADDING.mobile * 2
-    : THUMBNAIL_SIZE.desktop + THUMBNAIL_PADDING.desktop * 2
-
-  const viewportWidth = viewportRect?.width ?? window.innerWidth
-  const viewportHeight = viewportRect?.height ?? window.innerHeight
-  const viewportLeft = viewportRect?.left ?? 0
-  const viewportTop = viewportRect?.top ?? 0
-
-  const contentWidth = Math.max(0, viewportWidth - exifWidth)
-  const contentHeight = Math.max(0, viewportHeight - thumbnailHeight)
-
-  const photoWidth = photo.width || contentWidth
-  const photoHeight = photo.height || contentHeight || 1
-  const photoAspect = photoWidth / photoHeight || 1
-
-  let displayWidth = contentWidth
-  let displayHeight = contentWidth / photoAspect
-
-  if (displayHeight > contentHeight) {
-    displayHeight = contentHeight
-    displayWidth = contentHeight * photoAspect
-  }
-
-  const left = viewportLeft + (contentWidth - displayWidth) / 2
-  const top = viewportTop + (contentHeight - displayHeight) / 2
-
-  return {
-    left,
-    top,
-    width: displayWidth,
-    height: displayHeight,
-  }
 }
 
 export const PhotoViewer = ({
@@ -158,342 +51,38 @@ export const PhotoViewer = ({
   triggerElement,
 }: PhotoViewerProps) => {
   const { t } = useTranslation()
-  const containerRef = useRef<HTMLDivElement>(null)
   const swiperRef = useRef<SwiperType | null>(null)
   const [isImageZoomed, setIsImageZoomed] = useState(false)
   const [showExifPanel, setShowExifPanel] = useState(false)
   const [currentBlobSrc, setCurrentBlobSrc] = useState<string | null>(null)
-  const [entryAnimation, setEntryAnimation] =
-    useState<EntryAnimationState | null>(null)
-  const [exitAnimation, setExitAnimation] = useState<ExitAnimationState | null>(
-    null,
-  )
-  const [isViewerContentVisible, setIsViewerContentVisible] = useState(false)
-  const cachedTriggerRef = useRef<HTMLElement | null>(triggerElement)
-  const wasOpenRef = useRef(isOpen)
-  const viewerBoundsRef = useRef<DOMRect | null>(null)
-  const hiddenTriggerRef = useRef<HTMLElement | null>(null)
-  const hiddenTriggerPrevVisibilityRef = useRef<string | null>(null)
-  const viewerImageFrameRef = useRef<AnimationFrameRect | null>(null)
-  const isEntryAnimating = Boolean(entryAnimation)
 
-  const restoreTriggerElementVisibility = useCallback(() => {
-    const trigger = hiddenTriggerRef.current
-    if (trigger) {
-      const prevVisibility = hiddenTriggerPrevVisibilityRef.current
-      if (prevVisibility !== null && prevVisibility !== undefined) {
-        trigger.style.visibility = prevVisibility
-      } else {
-        trigger.style.removeProperty('visibility')
-      }
-    }
-    hiddenTriggerRef.current = null
-    hiddenTriggerPrevVisibilityRef.current = null
-  }, [])
-
-  const handleEntryAnimationComplete = useCallback(() => {
-    setIsViewerContentVisible(true)
-    setEntryAnimation(null)
-  }, [])
-
-  const handleExitAnimationComplete = useCallback(() => {
-    restoreTriggerElementVisibility()
-    setExitAnimation(null)
-  }, [restoreTriggerElementVisibility])
   const isMobile = useMobile()
-
   const currentPhoto = photos[currentIndex]
 
-  const resolveTriggerElement = useCallback((): HTMLElement | null => {
-    if (!currentPhoto) return null
-
-    if (triggerElement && triggerElement.isConnected) {
-      cachedTriggerRef.current = triggerElement
-      return triggerElement
-    }
-
-    const selector = `[data-photo-id='${escapeAttributeValue(currentPhoto.id)}']`
-    const liveTriggerEl =
-      typeof document === 'undefined'
-        ? null
-        : document.querySelector<HTMLElement>(selector)
-
-    if (liveTriggerEl && liveTriggerEl.isConnected) {
-      cachedTriggerRef.current = liveTriggerEl
-      return liveTriggerEl
-    }
-
-    if (cachedTriggerRef.current && cachedTriggerRef.current.isConnected) {
-      return cachedTriggerRef.current
-    }
-
-    return null
-  }, [currentPhoto, triggerElement])
-
-  useEffect(() => {
-    if (triggerElement) {
-      cachedTriggerRef.current = triggerElement
-    }
-  }, [triggerElement])
-
-  useEffect(() => {
-    if (!isOpen) {
-      setEntryAnimation(null)
-      setIsViewerContentVisible(false)
-      viewerImageFrameRef.current = null
-    }
-  }, [isOpen])
-
-  useEffect(() => {
-    if (!isOpen) return
-    resolveTriggerElement()
-  }, [isOpen, resolveTriggerElement])
-
-  useLayoutEffect(() => {
-    if (!isOpen || !currentPhoto) return
-    if (entryAnimation || isViewerContentVisible) return
-
-    if (typeof window === 'undefined') {
-      setIsViewerContentVisible(true)
-      return
-    }
-
-    const triggerEl = resolveTriggerElement()
-
-    if (!triggerEl) {
-      setIsViewerContentVisible(true)
-      return
-    }
-
-    const fromRect = triggerEl.getBoundingClientRect()
-    const viewportRect =
-      viewerBoundsRef.current ??
-      containerRef.current?.getBoundingClientRect() ??
-      null
-    const targetFrame = computeViewerImageFrame(
-      currentPhoto,
-      viewportRect,
-      isMobile,
-    )
-
-    if (
-      !fromRect.width ||
-      !fromRect.height ||
-      !targetFrame.width ||
-      !targetFrame.height
-    ) {
-      setIsViewerContentVisible(true)
-      return
-    }
-
-    const imageSrc =
-      currentBlobSrc ||
-      currentPhoto.thumbnailUrl ||
-      currentPhoto.originalUrl ||
-      null
-
-    if (!imageSrc) {
-      setIsViewerContentVisible(true)
-      return
-    }
-
-    hiddenTriggerRef.current = triggerEl
-    hiddenTriggerPrevVisibilityRef.current = triggerEl.style.visibility || null
-    triggerEl.style.visibility = 'hidden'
-
-    const triggerBorderRadius = getBorderRadius(
-      triggerEl instanceof HTMLImageElement && triggerEl.parentElement
-        ? triggerEl.parentElement
-        : triggerEl,
-    )
-    const targetBorderRadius = 0
-
-    setIsViewerContentVisible(true)
-    viewerImageFrameRef.current = {
-      left: targetFrame.left,
-      top: targetFrame.top,
-      width: targetFrame.width,
-      height: targetFrame.height,
-      borderRadius: targetBorderRadius,
-    }
-
-    const targetRectForAnimation = viewerImageFrameRef.current
-
-    setEntryAnimation({
-      photoId: currentPhoto.id,
-      imageSrc,
-      thumbHash: currentPhoto.thumbHash,
-      from: {
-        left: fromRect.left,
-        top: fromRect.top,
-        width: fromRect.width,
-        height: fromRect.height,
-        borderRadius: triggerBorderRadius,
-      },
-      to: {
-        left: targetRectForAnimation.left,
-        top: targetRectForAnimation.top,
-        width: targetRectForAnimation.width,
-        height: targetRectForAnimation.height,
-        borderRadius: targetRectForAnimation.borderRadius,
-      },
-    })
-  }, [
-    isOpen,
-    currentPhoto,
-    entryAnimation,
+  const {
+    containerRef,
+    entryTransition,
+    exitTransition,
     isViewerContentVisible,
-    currentBlobSrc,
-    isMobile,
-    resolveTriggerElement,
-  ])
-
-  useEffect(() => {
-    if (isOpen) {
-      wasOpenRef.current = true
-      setExitAnimation(null)
-      return
-    }
-
-    if (!wasOpenRef.current || !currentPhoto) {
-      wasOpenRef.current = false
-      restoreTriggerElementVisibility()
-      return
-    }
-
-    if (typeof window === 'undefined') {
-      wasOpenRef.current = false
-      restoreTriggerElementVisibility()
-      return
-    }
-
-    const triggerEl = resolveTriggerElement()
-
-    if (!triggerEl || !triggerEl.isConnected) {
-      wasOpenRef.current = false
-      restoreTriggerElementVisibility()
-      setExitAnimation(null)
-      return
-    }
-
-    const targetRect = triggerEl.getBoundingClientRect()
-    if (!targetRect.width || !targetRect.height) {
-      wasOpenRef.current = false
-      restoreTriggerElementVisibility()
-      setExitAnimation(null)
-      return
-    }
-
-    const viewportRect =
-      viewerBoundsRef.current ??
-      containerRef.current?.getBoundingClientRect() ??
-      null
-    const computedFrame = computeViewerImageFrame(
-      currentPhoto,
-      viewportRect,
-      isMobile,
-    )
-    const viewerFrame = viewerImageFrameRef.current ?? {
-      left: computedFrame.left,
-      top: computedFrame.top,
-      width: computedFrame.width,
-      height: computedFrame.height,
-      borderRadius: 0,
-    }
-
-    if (!viewerFrame.width || !viewerFrame.height) {
-      wasOpenRef.current = false
-      restoreTriggerElementVisibility()
-      setExitAnimation(null)
-      return
-    }
-
-    viewerImageFrameRef.current = viewerFrame
-
-    const borderRadius = getBorderRadius(
-      triggerEl instanceof HTMLImageElement && triggerEl.parentElement
-        ? triggerEl.parentElement
-        : triggerEl,
-    )
-
-    const imageSrc =
-      currentBlobSrc ||
-      currentPhoto.thumbnailUrl ||
-      currentPhoto.originalUrl ||
-      null
-
-    if (!imageSrc) {
-      wasOpenRef.current = false
-      restoreTriggerElementVisibility()
-      setExitAnimation(null)
-      return
-    }
-
-    restoreTriggerElementVisibility()
-    hiddenTriggerRef.current = triggerEl
-    hiddenTriggerPrevVisibilityRef.current = triggerEl.style.visibility || null
-    triggerEl.style.visibility = 'hidden'
-
-    setExitAnimation({
-      photoId: currentPhoto.id,
-      imageSrc,
-      thumbHash: currentPhoto.thumbHash,
-      from: {
-        left: viewerFrame.left,
-        top: viewerFrame.top,
-        width: viewerFrame.width,
-        height: viewerFrame.height,
-        borderRadius: 0,
-      },
-      to: {
-        left: targetRect.left,
-        top: targetRect.top,
-        width: targetRect.width,
-        height: targetRect.height,
-        borderRadius,
-      },
-    })
-
-    wasOpenRef.current = false
-  }, [
+    isEntryAnimating,
+    shouldRenderBackdrop,
+    thumbHash: transitionThumbHash,
+    shouldRenderThumbhash,
+    handleEntryAnimationComplete,
+    handleExitAnimationComplete,
+  } = usePhotoViewerTransitions({
     isOpen,
+    triggerElement,
     currentPhoto,
     currentBlobSrc,
-    restoreTriggerElementVisibility,
-    entryAnimation,
     isMobile,
-    resolveTriggerElement,
-  ])
+  })
 
   useEffect(() => {
-    return () => {
-      restoreTriggerElementVisibility()
-    }
-  }, [restoreTriggerElementVisibility])
-
-  // 当 PhotoViewer 关闭时重置缩放状态和面板状态
-  useLayoutEffect(() => {
     if (!isOpen) {
       setIsImageZoomed(false)
       setShowExifPanel(false)
       setCurrentBlobSrc(null)
-    }
-  }, [isOpen])
-
-  useLayoutEffect(() => {
-    if (!isOpen) return
-
-    const updateBounds = () => {
-      if (containerRef.current) {
-        viewerBoundsRef.current = containerRef.current.getBoundingClientRect()
-      }
-    }
-
-    updateBounds()
-    window.addEventListener('resize', updateBounds)
-
-    return () => {
-      window.removeEventListener('resize', updateBounds)
     }
   }, [isOpen])
 
@@ -576,12 +165,7 @@ export const PhotoViewer = ({
 
   if (!currentPhoto) return null
 
-  const shouldRenderBackdrop =
-    isOpen || Boolean(exitAnimation) || Boolean(entryAnimation)
-  const currentThumbHash =
-    typeof currentPhoto.thumbHash === 'string' ? currentPhoto.thumbHash : null
-  const shouldRenderThumbhash =
-    shouldRenderBackdrop && Boolean(currentThumbHash)
+  const currentThumbHash = transitionThumbHash
 
   return (
     <>
@@ -849,17 +433,17 @@ export const PhotoViewer = ({
           </m.div>
         )}
       </AnimatePresence>
-      {entryAnimation && (
-        <EntryAnimationPreview
-          key={entryAnimation.photoId}
-          data={entryAnimation}
+      {entryTransition && (
+        <PhotoViewerTransitionPreview
+          key={`${entryTransition.variant}-${entryTransition.photoId}`}
+          transition={entryTransition}
           onComplete={handleEntryAnimationComplete}
         />
       )}
-      {exitAnimation && (
-        <ExitAnimationPreview
-          key={exitAnimation.photoId}
-          data={exitAnimation}
+      {exitTransition && (
+        <PhotoViewerTransitionPreview
+          key={`${exitTransition.variant}-${exitTransition.photoId}`}
+          transition={exitTransition}
           onComplete={handleExitAnimationComplete}
         />
       )}
@@ -875,104 +459,4 @@ const AnimatePresenceOnlyMobile = ({
   const isMobile = useMobile()
   if (!isMobile) return children
   return <AnimatePresence>{children}</AnimatePresence>
-}
-
-function EntryAnimationPreview({
-  data,
-  onComplete,
-}: {
-  data: EntryAnimationState
-  onComplete: () => void
-}) {
-  const baseTransition = Spring.snappy(0.5)
-  const thumbHash = typeof data.thumbHash === 'string' ? data.thumbHash : null
-
-  return (
-    <m.div
-      className="pointer-events-none fixed top-0 left-0 z-[40]"
-      initial={{
-        x: data.from.left,
-        y: data.from.top,
-        width: data.from.width,
-        height: data.from.height,
-        borderRadius: data.from.borderRadius,
-        opacity: 1,
-      }}
-      animate={{
-        x: data.to.left,
-        y: data.to.top,
-        width: data.to.width,
-        height: data.to.height,
-        borderRadius: data.to.borderRadius,
-        opacity: 1,
-      }}
-      transition={baseTransition}
-      onAnimationComplete={onComplete}
-    >
-      <div className="relative h-full w-full overflow-hidden bg-black">
-        {thumbHash && (
-          <Thumbhash
-            thumbHash={thumbHash}
-            className="pointer-events-none absolute inset-0 h-full w-full"
-          />
-        )}
-        <img
-          src={data.imageSrc}
-          alt=""
-          className="absolute inset-0 h-full w-full object-cover"
-          draggable={false}
-        />
-      </div>
-    </m.div>
-  )
-}
-
-function ExitAnimationPreview({
-  data,
-  onComplete,
-}: {
-  data: ExitAnimationState
-  onComplete: () => void
-}) {
-  const baseTransition = Spring.snappy(0.5)
-  const thumbHash = typeof data.thumbHash === 'string' ? data.thumbHash : null
-
-  return (
-    <m.div
-      className="pointer-events-none fixed top-0 left-0 z-[40]"
-      initial={{
-        x: data.from.left,
-        y: data.from.top,
-        width: data.from.width,
-        height: data.from.height,
-        borderRadius: data.from.borderRadius,
-        opacity: 1,
-      }}
-      animate={{
-        x: data.to.left,
-        y: data.to.top,
-        width: data.to.width,
-        height: data.to.height,
-        borderRadius: data.to.borderRadius,
-        opacity: 1,
-      }}
-      transition={baseTransition}
-      onAnimationComplete={onComplete}
-    >
-      <div className="relative h-full w-full overflow-hidden bg-black">
-        {thumbHash && (
-          <Thumbhash
-            thumbHash={thumbHash}
-            className="pointer-events-none absolute inset-0 h-full w-full"
-          />
-        )}
-        <img
-          src={data.imageSrc}
-          alt=""
-          className="absolute inset-0 h-full w-full object-cover"
-          draggable={false}
-        />
-      </div>
-    </m.div>
-  )
 }
