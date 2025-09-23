@@ -84,7 +84,7 @@ export const usePhotoViewerTransitions = ({
       return triggerElement
     }
 
-    const selector = `[data-photo-id='${escapeAttributeValue(currentPhoto.id)}']`
+    const selector = `[data-photo-id="${escapeAttributeValue(currentPhoto.id)}"]`
     const liveTriggerEl =
       typeof document === 'undefined'
         ? null
