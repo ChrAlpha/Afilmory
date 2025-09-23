@@ -927,7 +927,7 @@ function ExitAnimationPreview({
   data: ExitAnimationState
   onComplete: () => void
 }) {
-  const baseTransition = Spring.snappy(0.45)
+  const baseTransition = Spring.snappy(0.5)
   const thumbHash = typeof data.thumbHash === 'string' ? data.thumbHash : null
 
   return (
