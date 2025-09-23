@@ -882,7 +882,7 @@ function EntryAnimationPreview({
 
   return (
     <m.div
-      className="pointer-events-none fixed top-0 left-0 z-[80]"
+      className="pointer-events-none fixed top-0 left-0 z-[40]"
       initial={{
         x: data.from.left,
         y: data.from.top,
@@ -932,7 +932,7 @@ function ExitAnimationPreview({
 
   return (
     <m.div
-      className="pointer-events-none fixed top-0 left-0 z-[80]"
+      className="pointer-events-none fixed top-0 left-0 z-[40]"
       initial={{
         x: data.from.left,
         y: data.from.top,
