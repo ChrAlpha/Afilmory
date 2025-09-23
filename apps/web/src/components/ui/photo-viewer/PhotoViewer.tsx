@@ -734,6 +734,8 @@ export const PhotoViewer = ({
                   >
                     {photos.map((photo, index) => {
                       const isCurrentImage = index === currentIndex
+                      const hideCurrentImage =
+                        isEntryAnimating && isCurrentImage
                       return (
                         <SwiperSlide
                           key={photo.id}
@@ -746,6 +748,11 @@ export const PhotoViewer = ({
                             exit={{ opacity: 0, scale: 0.95 }}
                             transition={Spring.presets.smooth}
                             className="relative flex h-full w-full items-center justify-center"
+                            style={{
+                              visibility: hideCurrentImage
+                                ? 'hidden'
+                                : 'visible',
+                            }}
                           >
                             <ProgressiveImage
                               loadingIndicatorRef={loadingIndicatorRef}
