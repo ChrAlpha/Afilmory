@@ -174,6 +174,7 @@ export const PhotoViewer = ({
   const viewerBoundsRef = useRef<DOMRect | null>(null)
   const hiddenTriggerRef = useRef<HTMLElement | null>(null)
   const hiddenTriggerPrevVisibilityRef = useRef<string | null>(null)
+  const viewerImageFrameRef = useRef<AnimationFrameRect | null>(null)
   const isEntryAnimating = Boolean(entryAnimation)
 
   const restoreTriggerElementVisibility = useCallback(() => {
@@ -203,6 +204,32 @@ export const PhotoViewer = ({
 
   const currentPhoto = photos[currentIndex]
 
+  const resolveTriggerElement = useCallback((): HTMLElement | null => {
+    if (!currentPhoto) return null
+
+    if (triggerElement && triggerElement.isConnected) {
+      cachedTriggerRef.current = triggerElement
+      return triggerElement
+    }
+
+    const selector = `[data-photo-id='${escapeAttributeValue(currentPhoto.id)}']`
+    const liveTriggerEl =
+      typeof document === 'undefined'
+        ? null
+        : document.querySelector<HTMLElement>(selector)
+
+    if (liveTriggerEl && liveTriggerEl.isConnected) {
+      cachedTriggerRef.current = liveTriggerEl
+      return liveTriggerEl
+    }
+
+    if (cachedTriggerRef.current && cachedTriggerRef.current.isConnected) {
+      return cachedTriggerRef.current
+    }
+
+    return null
+  }, [currentPhoto, triggerElement])
+
   useEffect(() => {
     if (triggerElement) {
       cachedTriggerRef.current = triggerElement
@@ -213,19 +240,14 @@ export const PhotoViewer = ({
     if (!isOpen) {
       setEntryAnimation(null)
       setIsViewerContentVisible(false)
+      viewerImageFrameRef.current = null
     }
   }, [isOpen])
 
   useEffect(() => {
-    if (!isOpen || !currentPhoto) return
-    if (typeof document === 'undefined') return
-
-    const selector = `[data-photo-id='${escapeAttributeValue(currentPhoto.id)}']`
-    const liveTriggerEl = document.querySelector<HTMLElement>(selector)
-    if (liveTriggerEl) {
-      cachedTriggerRef.current = liveTriggerEl
-    }
-  }, [isOpen, currentPhoto])
+    if (!isOpen) return
+    resolveTriggerElement()
+  }, [isOpen, resolveTriggerElement])
 
   useLayoutEffect(() => {
     if (!isOpen || !currentPhoto) return
@@ -236,17 +258,7 @@ export const PhotoViewer = ({
       return
     }
 
-    const selector = `[data-photo-id='${escapeAttributeValue(currentPhoto.id)}']`
-    const liveTriggerEl = document.querySelector<HTMLElement>(selector)
-
-    let triggerEl: HTMLElement | null = null
-    if (triggerElement && triggerElement.isConnected) {
-      triggerEl = triggerElement
-    } else if (liveTriggerEl) {
-      triggerEl = liveTriggerEl
-    } else if (cachedTriggerRef.current?.isConnected) {
-      triggerEl = cachedTriggerRef.current
-    }
+    const triggerEl = resolveTriggerElement()
 
     if (!triggerEl) {
       setIsViewerContentVisible(true)
@@ -285,7 +297,6 @@ export const PhotoViewer = ({
       return
     }
 
-    cachedTriggerRef.current = triggerEl
     hiddenTriggerRef.current = triggerEl
     hiddenTriggerPrevVisibilityRef.current = triggerEl.style.visibility || null
     triggerEl.style.visibility = 'hidden'
@@ -298,6 +309,16 @@ export const PhotoViewer = ({
     const targetBorderRadius = 0
 
     setIsViewerContentVisible(true)
+    viewerImageFrameRef.current = {
+      left: targetFrame.left,
+      top: targetFrame.top,
+      width: targetFrame.width,
+      height: targetFrame.height,
+      borderRadius: targetBorderRadius,
+    }
+
+    const targetRectForAnimation = viewerImageFrameRef.current
+
     setEntryAnimation({
       photoId: currentPhoto.id,
       imageSrc,
@@ -310,21 +331,21 @@ export const PhotoViewer = ({
         borderRadius: triggerBorderRadius,
       },
       to: {
-        left: targetFrame.left,
-        top: targetFrame.top,
-        width: targetFrame.width,
-        height: targetFrame.height,
-        borderRadius: targetBorderRadius,
+        left: targetRectForAnimation.left,
+        top: targetRectForAnimation.top,
+        width: targetRectForAnimation.width,
+        height: targetRectForAnimation.height,
+        borderRadius: targetRectForAnimation.borderRadius,
       },
     })
   }, [
     isOpen,
     currentPhoto,
-    triggerElement,
     entryAnimation,
     isViewerContentVisible,
     currentBlobSrc,
     isMobile,
+    resolveTriggerElement,
   ])
 
   useEffect(() => {
@@ -346,17 +367,7 @@ export const PhotoViewer = ({
       return
     }
 
-    const selector = `[data-photo-id='${escapeAttributeValue(currentPhoto.id)}']`
-    const liveTriggerEl =
-      typeof document === 'undefined'
-        ? null
-        : document.querySelector<HTMLElement>(selector)
-
-    const triggerEl = liveTriggerEl ?? cachedTriggerRef.current
-
-    if (liveTriggerEl && liveTriggerEl !== cachedTriggerRef.current) {
-      cachedTriggerRef.current = liveTriggerEl
-    }
+    const triggerEl = resolveTriggerElement()
 
     if (!triggerEl || !triggerEl.isConnected) {
       wasOpenRef.current = false
@@ -377,11 +388,18 @@ export const PhotoViewer = ({
       viewerBoundsRef.current ??
       containerRef.current?.getBoundingClientRect() ??
       null
-    const viewerFrame = computeViewerImageFrame(
+    const computedFrame = computeViewerImageFrame(
       currentPhoto,
       viewportRect,
       isMobile,
     )
+    const viewerFrame = viewerImageFrameRef.current ?? {
+      left: computedFrame.left,
+      top: computedFrame.top,
+      width: computedFrame.width,
+      height: computedFrame.height,
+      borderRadius: 0,
+    }
 
     if (!viewerFrame.width || !viewerFrame.height) {
       wasOpenRef.current = false
@@ -389,6 +407,8 @@ export const PhotoViewer = ({
       setExitAnimation(null)
       return
     }
+
+    viewerImageFrameRef.current = viewerFrame
 
     const borderRadius = getBorderRadius(
       triggerEl instanceof HTMLImageElement && triggerEl.parentElement
@@ -442,6 +462,7 @@ export const PhotoViewer = ({
     restoreTriggerElementVisibility,
     entryAnimation,
     isMobile,
+    resolveTriggerElement,
   ])
 
   useEffect(() => {
