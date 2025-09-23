@@ -174,6 +174,7 @@ export const PhotoViewer = ({
   const viewerBoundsRef = useRef<DOMRect | null>(null)
   const hiddenTriggerRef = useRef<HTMLElement | null>(null)
   const hiddenTriggerPrevVisibilityRef = useRef<string | null>(null)
+  const isEntryAnimating = Boolean(entryAnimation)
 
   const restoreTriggerElementVisibility = useCallback(() => {
     const trigger = hiddenTriggerRef.current
@@ -296,7 +297,7 @@ export const PhotoViewer = ({
     )
     const targetBorderRadius = 0
 
-    setIsViewerContentVisible(false)
+    setIsViewerContentVisible(true)
     setEntryAnimation({
       photoId: currentPhoto.id,
       imageSrc,
@@ -604,7 +605,8 @@ export const PhotoViewer = ({
             className="fixed inset-0 z-50 flex items-center justify-center"
             style={{
               touchAction: isMobile ? 'manipulation' : 'none',
-              pointerEvents: isViewerContentVisible ? 'auto' : 'none',
+              pointerEvents:
+                !isViewerContentVisible || isEntryAnimating ? 'none' : 'auto',
             }}
             initial={{ opacity: 0 }}
             animate={{ opacity: isViewerContentVisible ? 1 : 0 }}
@@ -677,7 +679,10 @@ export const PhotoViewer = ({
                       style={{
                         opacity: isViewerContentVisible ? 1 : 0,
                         transition: 'opacity 180ms ease',
-                        pointerEvents: isViewerContentVisible ? 'auto' : 'none',
+                        pointerEvents:
+                          !isViewerContentVisible || isEntryAnimating
+                            ? 'none'
+                            : 'auto',
                       }}
                     />
                   )}
