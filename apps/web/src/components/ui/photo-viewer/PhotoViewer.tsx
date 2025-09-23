@@ -49,22 +49,103 @@ interface PhotoViewerProps {
   triggerElement: HTMLElement | null
 }
 
+type AnimationFrameRect = {
+  left: number
+  top: number
+  width: number
+  height: number
+  borderRadius: number
+}
+
 type ExitAnimationState = {
   photoId: string
   imageSrc: string
   thumbHash?: string | null
-  from: {
-    left: number
-    top: number
-    width: number
-    height: number
+  from: AnimationFrameRect
+  to: AnimationFrameRect
+}
+
+type EntryAnimationState = {
+  photoId: string
+  imageSrc: string
+  thumbHash?: string | null
+  from: AnimationFrameRect
+  to: AnimationFrameRect
+}
+
+const getBorderRadius = (element: Element | null) => {
+  if (typeof window === 'undefined' || !element) return 0
+
+  const computedStyle = window.getComputedStyle(element)
+  const radiusCandidates = [
+    computedStyle.borderRadius,
+    computedStyle.borderTopLeftRadius,
+    computedStyle.borderTopRightRadius,
+  ].filter((value) => value && value !== '0px')
+
+  if (radiusCandidates.length === 0) return 0
+
+  const parsed = Number.parseFloat(radiusCandidates[0] || '0')
+  if (Number.isNaN(parsed)) return 0
+  return Math.max(0, parsed)
+}
+
+const DESKTOP_EXIF_PANEL_WIDTH_REM = 20
+const THUMBNAIL_SIZE = {
+  mobile: 48,
+  desktop: 64,
+} as const
+const THUMBNAIL_PADDING = {
+  mobile: 12,
+  desktop: 16,
+} as const
+
+const getRootFontSize = () => {
+  if (typeof window === 'undefined') return 16
+  const value = window.getComputedStyle(document.documentElement).fontSize
+  const parsed = Number.parseFloat(value || '16')
+  return Number.isNaN(parsed) ? 16 : parsed
+}
+
+const computeViewerImageFrame = (
+  photo: PhotoManifest,
+  viewportRect: DOMRect | null,
+  isMobile: boolean,
+) => {
+  const baseFontSize = getRootFontSize()
+  const exifWidth = isMobile ? 0 : DESKTOP_EXIF_PANEL_WIDTH_REM * baseFontSize
+  const thumbnailHeight = isMobile
+    ? THUMBNAIL_SIZE.mobile + THUMBNAIL_PADDING.mobile * 2
+    : THUMBNAIL_SIZE.desktop + THUMBNAIL_PADDING.desktop * 2
+
+  const viewportWidth = viewportRect?.width ?? window.innerWidth
+  const viewportHeight = viewportRect?.height ?? window.innerHeight
+  const viewportLeft = viewportRect?.left ?? 0
+  const viewportTop = viewportRect?.top ?? 0
+
+  const contentWidth = Math.max(0, viewportWidth - exifWidth)
+  const contentHeight = Math.max(0, viewportHeight - thumbnailHeight)
+
+  const photoWidth = photo.width || contentWidth
+  const photoHeight = photo.height || contentHeight || 1
+  const photoAspect = photoWidth / photoHeight || 1
+
+  let displayWidth = contentWidth
+  let displayHeight = contentWidth / photoAspect
+
+  if (displayHeight > contentHeight) {
+    displayHeight = contentHeight
+    displayWidth = contentHeight * photoAspect
   }
-  to: {
-    left: number
-    top: number
-    width: number
-    height: number
-    borderRadius: number
+
+  const left = viewportLeft + (contentWidth - displayWidth) / 2
+  const top = viewportTop + (contentHeight - displayHeight) / 2
+
+  return {
+    left,
+    top,
+    width: displayWidth,
+    height: displayHeight,
   }
 }
 
@@ -82,27 +163,35 @@ export const PhotoViewer = ({
   const [isImageZoomed, setIsImageZoomed] = useState(false)
   const [showExifPanel, setShowExifPanel] = useState(false)
   const [currentBlobSrc, setCurrentBlobSrc] = useState<string | null>(null)
+  const [entryAnimation, setEntryAnimation] =
+    useState<EntryAnimationState | null>(null)
   const [exitAnimation, setExitAnimation] = useState<ExitAnimationState | null>(
     null,
   )
+  const [isViewerContentVisible, setIsViewerContentVisible] = useState(false)
   const cachedTriggerRef = useRef<HTMLElement | null>(triggerElement)
   const wasOpenRef = useRef(isOpen)
   const viewerBoundsRef = useRef<DOMRect | null>(null)
-  const exitAnimationTriggerRef = useRef<HTMLElement | null>(null)
-  const triggerPrevVisibilityRef = useRef<string | null>(null)
+  const hiddenTriggerRef = useRef<HTMLElement | null>(null)
+  const hiddenTriggerPrevVisibilityRef = useRef<string | null>(null)
 
   const restoreTriggerElementVisibility = useCallback(() => {
-    const trigger = exitAnimationTriggerRef.current
+    const trigger = hiddenTriggerRef.current
     if (trigger) {
-      const prevVisibility = triggerPrevVisibilityRef.current
+      const prevVisibility = hiddenTriggerPrevVisibilityRef.current
       if (prevVisibility !== null && prevVisibility !== undefined) {
         trigger.style.visibility = prevVisibility
       } else {
         trigger.style.removeProperty('visibility')
       }
     }
-    exitAnimationTriggerRef.current = null
-    triggerPrevVisibilityRef.current = null
+    hiddenTriggerRef.current = null
+    hiddenTriggerPrevVisibilityRef.current = null
+  }, [])
+
+  const handleEntryAnimationComplete = useCallback(() => {
+    setIsViewerContentVisible(true)
+    setEntryAnimation(null)
   }, [])
 
   const handleExitAnimationComplete = useCallback(() => {
@@ -120,6 +209,13 @@ export const PhotoViewer = ({
   }, [triggerElement])
 
   useEffect(() => {
+    if (!isOpen) {
+      setEntryAnimation(null)
+      setIsViewerContentVisible(false)
+    }
+  }, [isOpen])
+
+  useEffect(() => {
     if (!isOpen || !currentPhoto) return
     if (typeof document === 'undefined') return
 
@@ -130,10 +226,109 @@ export const PhotoViewer = ({
     }
   }, [isOpen, currentPhoto])
 
+  useLayoutEffect(() => {
+    if (!isOpen || !currentPhoto) return
+    if (entryAnimation || isViewerContentVisible) return
+
+    if (typeof window === 'undefined') {
+      setIsViewerContentVisible(true)
+      return
+    }
+
+    const selector = `[data-photo-id='${escapeAttributeValue(currentPhoto.id)}']`
+    const liveTriggerEl = document.querySelector<HTMLElement>(selector)
+
+    let triggerEl: HTMLElement | null = null
+    if (triggerElement && triggerElement.isConnected) {
+      triggerEl = triggerElement
+    } else if (liveTriggerEl) {
+      triggerEl = liveTriggerEl
+    } else if (cachedTriggerRef.current?.isConnected) {
+      triggerEl = cachedTriggerRef.current
+    }
+
+    if (!triggerEl) {
+      setIsViewerContentVisible(true)
+      return
+    }
+
+    const fromRect = triggerEl.getBoundingClientRect()
+    const viewportRect =
+      viewerBoundsRef.current ??
+      containerRef.current?.getBoundingClientRect() ??
+      null
+    const targetFrame = computeViewerImageFrame(
+      currentPhoto,
+      viewportRect,
+      isMobile,
+    )
+
+    if (
+      !fromRect.width ||
+      !fromRect.height ||
+      !targetFrame.width ||
+      !targetFrame.height
+    ) {
+      setIsViewerContentVisible(true)
+      return
+    }
+
+    const imageSrc =
+      currentBlobSrc ||
+      currentPhoto.thumbnailUrl ||
+      currentPhoto.originalUrl ||
+      null
+
+    if (!imageSrc) {
+      setIsViewerContentVisible(true)
+      return
+    }
+
+    cachedTriggerRef.current = triggerEl
+    hiddenTriggerRef.current = triggerEl
+    hiddenTriggerPrevVisibilityRef.current = triggerEl.style.visibility || null
+    triggerEl.style.visibility = 'hidden'
+
+    const triggerBorderRadius = getBorderRadius(
+      triggerEl instanceof HTMLImageElement && triggerEl.parentElement
+        ? triggerEl.parentElement
+        : triggerEl,
+    )
+    const targetBorderRadius = 0
+
+    setIsViewerContentVisible(false)
+    setEntryAnimation({
+      photoId: currentPhoto.id,
+      imageSrc,
+      thumbHash: currentPhoto.thumbHash,
+      from: {
+        left: fromRect.left,
+        top: fromRect.top,
+        width: fromRect.width,
+        height: fromRect.height,
+        borderRadius: triggerBorderRadius,
+      },
+      to: {
+        left: targetFrame.left,
+        top: targetFrame.top,
+        width: targetFrame.width,
+        height: targetFrame.height,
+        borderRadius: targetBorderRadius,
+      },
+    })
+  }, [
+    isOpen,
+    currentPhoto,
+    triggerElement,
+    entryAnimation,
+    isViewerContentVisible,
+    currentBlobSrc,
+    isMobile,
+  ])
+
   useEffect(() => {
     if (isOpen) {
       wasOpenRef.current = true
-      restoreTriggerElementVisibility()
       setExitAnimation(null)
       return
     }
@@ -177,50 +372,28 @@ export const PhotoViewer = ({
       return
     }
 
-    const viewportRect = viewerBoundsRef.current
-    const viewportWidth = viewportRect?.width ?? window.innerWidth
-    const viewportHeight = viewportRect?.height ?? window.innerHeight
-    const viewportLeft = viewportRect?.left ?? 0
-    const viewportTop = viewportRect?.top ?? 0
+    const viewportRect =
+      viewerBoundsRef.current ??
+      containerRef.current?.getBoundingClientRect() ??
+      null
+    const viewerFrame = computeViewerImageFrame(
+      currentPhoto,
+      viewportRect,
+      isMobile,
+    )
 
-    const photoWidth = currentPhoto.width || viewportWidth
-    const photoHeight = currentPhoto.height || viewportHeight
-    if (!photoWidth || !photoHeight) {
+    if (!viewerFrame.width || !viewerFrame.height) {
       wasOpenRef.current = false
       restoreTriggerElementVisibility()
       setExitAnimation(null)
       return
     }
 
-    const photoAspect = photoWidth / photoHeight
-    let displayWidth = viewportWidth
-    let displayHeight = viewportWidth / photoAspect
-
-    if (displayHeight > viewportHeight) {
-      displayHeight = viewportHeight
-      displayWidth = viewportHeight * photoAspect
-    }
-
-    const startLeft = viewportLeft + (viewportWidth - displayWidth) / 2
-    const startTop = viewportTop + (viewportHeight - displayHeight) / 2
-
-    const elementForStyle =
+    const borderRadius = getBorderRadius(
       triggerEl instanceof HTMLImageElement && triggerEl.parentElement
         ? triggerEl.parentElement
-        : triggerEl
-
-    const computedStyle = window.getComputedStyle(elementForStyle)
-    const radiusCandidates = [
-      computedStyle.borderRadius,
-      computedStyle.borderTopLeftRadius,
-      computedStyle.borderTopRightRadius,
-    ].find(Boolean)
-    const borderRadiusRaw = radiusCandidates
-      ? Number.parseFloat(radiusCandidates)
-      : 0
-    const borderRadius = Number.isNaN(borderRadiusRaw)
-      ? 0
-      : Math.max(0, borderRadiusRaw)
+        : triggerEl,
+    )
 
     const imageSrc =
       currentBlobSrc ||
@@ -236,8 +409,8 @@ export const PhotoViewer = ({
     }
 
     restoreTriggerElementVisibility()
-    exitAnimationTriggerRef.current = triggerEl
-    triggerPrevVisibilityRef.current = triggerEl.style.visibility || null
+    hiddenTriggerRef.current = triggerEl
+    hiddenTriggerPrevVisibilityRef.current = triggerEl.style.visibility || null
     triggerEl.style.visibility = 'hidden'
 
     setExitAnimation({
@@ -245,10 +418,11 @@ export const PhotoViewer = ({
       imageSrc,
       thumbHash: currentPhoto.thumbHash,
       from: {
-        left: startLeft,
-        top: startTop,
-        width: displayWidth,
-        height: displayHeight,
+        left: viewerFrame.left,
+        top: viewerFrame.top,
+        width: viewerFrame.width,
+        height: viewerFrame.height,
+        borderRadius: 0,
       },
       to: {
         left: targetRect.left,
@@ -260,7 +434,14 @@ export const PhotoViewer = ({
     })
 
     wasOpenRef.current = false
-  }, [isOpen, currentPhoto, currentBlobSrc, restoreTriggerElementVisibility])
+  }, [
+    isOpen,
+    currentPhoto,
+    currentBlobSrc,
+    restoreTriggerElementVisibility,
+    entryAnimation,
+    isMobile,
+  ])
 
   useEffect(() => {
     return () => {
@@ -373,7 +554,8 @@ export const PhotoViewer = ({
 
   if (!currentPhoto) return null
 
-  const shouldRenderBackdrop = isOpen || Boolean(exitAnimation)
+  const shouldRenderBackdrop =
+    isOpen || Boolean(exitAnimation) || Boolean(entryAnimation)
   const currentThumbHash =
     typeof currentPhoto.thumbHash === 'string' ? currentPhoto.thumbHash : null
   const shouldRenderThumbhash =
@@ -417,20 +599,31 @@ export const PhotoViewer = ({
 
       <AnimatePresence>
         {isOpen && (
-          <div
+          <m.div
             ref={containerRef}
             className="fixed inset-0 z-50 flex items-center justify-center"
-            style={{ touchAction: isMobile ? 'manipulation' : 'none' }}
+            style={{
+              touchAction: isMobile ? 'manipulation' : 'none',
+              pointerEvents: isViewerContentVisible ? 'auto' : 'none',
+            }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: isViewerContentVisible ? 1 : 0 }}
+            exit={{ opacity: 0 }}
+            transition={Spring.presets.snappy}
           >
             <div
               className={`flex size-full ${isMobile ? 'flex-col' : 'flex-row'}`}
             >
               <div className="z-[1] flex min-h-0 min-w-0 flex-1 flex-col">
-                <div className="group relative flex min-h-0 min-w-0 flex-1">
+                <m.div
+                  className="group relative flex min-h-0 min-w-0 flex-1"
+                  animate={{ opacity: isViewerContentVisible ? 1 : 0 }}
+                  transition={Spring.presets.snappy}
+                >
                   {/* 顶部工具栏 */}
                   <m.div
                     initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
+                    animate={{ opacity: isViewerContentVisible ? 1 : 0 }}
                     exit={{ opacity: 0 }}
                     transition={Spring.presets.snappy}
                     className={`pointer-events-none absolute ${isMobile ? 'top-2 right-2 left-2' : 'top-4 right-4 left-4'} z-30 flex items-center justify-between`}
@@ -481,6 +674,11 @@ export const PhotoViewer = ({
                     <ReactionButton
                       photoId={currentPhoto.id}
                       className="absolute right-4 bottom-4"
+                      style={{
+                        opacity: isViewerContentVisible ? 1 : 0,
+                        transition: 'opacity 180ms ease',
+                        pointerEvents: isViewerContentVisible ? 'auto' : 'none',
+                      }}
                     />
                   )}
 
@@ -586,13 +784,14 @@ export const PhotoViewer = ({
                       )}
                     </Fragment>
                   )}
-                </div>
+                </m.div>
 
                 <Suspense>
                   <GalleryThumbnail
                     currentIndex={currentIndex}
                     photos={photos}
                     onIndexChange={onIndexChange}
+                    visible={isViewerContentVisible}
                   />
                 </Suspense>
               </div>
@@ -605,6 +804,7 @@ export const PhotoViewer = ({
                     <ExifPanel
                       currentPhoto={currentPhoto}
                       exifData={currentPhoto.exif}
+                      visible={isViewerContentVisible}
                       onClose={
                         isMobile ? () => setShowExifPanel(false) : undefined
                       }
@@ -613,9 +813,16 @@ export const PhotoViewer = ({
                 </AnimatePresenceOnlyMobile>
               </Suspense>
             </div>
-          </div>
+          </m.div>
         )}
       </AnimatePresence>
+      {entryAnimation && (
+        <EntryAnimationPreview
+          key={entryAnimation.photoId}
+          data={entryAnimation}
+          onComplete={handleEntryAnimationComplete}
+        />
+      )}
       {exitAnimation && (
         <ExitAnimationPreview
           key={exitAnimation.photoId}
@@ -637,6 +844,56 @@ const AnimatePresenceOnlyMobile = ({
   return <AnimatePresence>{children}</AnimatePresence>
 }
 
+function EntryAnimationPreview({
+  data,
+  onComplete,
+}: {
+  data: EntryAnimationState
+  onComplete: () => void
+}) {
+  const baseTransition = Spring.snappy(0.5)
+  const thumbHash = typeof data.thumbHash === 'string' ? data.thumbHash : null
+
+  return (
+    <m.div
+      className="pointer-events-none fixed top-0 left-0 z-[80]"
+      initial={{
+        x: data.from.left,
+        y: data.from.top,
+        width: data.from.width,
+        height: data.from.height,
+        borderRadius: data.from.borderRadius,
+        opacity: 1,
+      }}
+      animate={{
+        x: data.to.left,
+        y: data.to.top,
+        width: data.to.width,
+        height: data.to.height,
+        borderRadius: data.to.borderRadius,
+        opacity: 1,
+      }}
+      transition={baseTransition}
+      onAnimationComplete={onComplete}
+    >
+      <div className="relative h-full w-full overflow-hidden bg-black">
+        {thumbHash && (
+          <Thumbhash
+            thumbHash={thumbHash}
+            className="pointer-events-none absolute inset-0 h-full w-full"
+          />
+        )}
+        <img
+          src={data.imageSrc}
+          alt=""
+          className="absolute inset-0 h-full w-full object-cover"
+          draggable={false}
+        />
+      </div>
+    </m.div>
+  )
+}
+
 function ExitAnimationPreview({
   data,
   onComplete,
@@ -655,7 +912,7 @@ function ExitAnimationPreview({
         y: data.from.top,
         width: data.from.width,
         height: data.from.height,
-        borderRadius: 0,
+        borderRadius: data.from.borderRadius,
         opacity: 1,
       }}
       animate={{
