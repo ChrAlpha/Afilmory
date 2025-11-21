@@ -694,6 +694,15 @@ export class AfilmoryBuilder {
   }
 
   /**
+   * 更新存储配置
+   * @param config 新的存储配置
+   */
+  updateStorageConfig(config: StorageConfig): void {
+    const userSettings = this.getUserSettings()
+    userSettings.storage = config
+  }
+
+  /**
    * 获取当前配置
    */
   getConfig(): BuilderConfig {

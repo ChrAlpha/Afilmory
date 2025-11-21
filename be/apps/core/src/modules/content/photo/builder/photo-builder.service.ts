@@ -51,6 +51,9 @@ export class PhotoBuilderService {
   }
 
   applyStorageConfig(builder: AfilmoryBuilder, config: StorageConfig): void {
+    // Update the builder's internal config so plugins can read the correct storage config
+    builder.updateStorageConfig(config)
+    // Switch the storage provider to use the new config
     builder.getStorageManager().switchProvider(config)
   }
 
