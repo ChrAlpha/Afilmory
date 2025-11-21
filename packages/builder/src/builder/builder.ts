@@ -694,10 +694,13 @@ export class AfilmoryBuilder {
   }
 
   /**
-   * 更新存储配置
-   * @param config 新的存储配置
+   * Updates storage configuration
+   * @param config New storage configuration
    */
   updateStorageConfig(config: StorageConfig): void {
+    if (!config || typeof config !== 'object' || !config.provider) {
+      throw new Error('Invalid storage configuration. Config must have a provider.')
+    }
     const userSettings = this.getUserSettings()
     userSettings.storage = config
   }
