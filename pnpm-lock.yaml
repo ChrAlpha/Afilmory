@@ -657,15 +657,15 @@ importers:
       '@react-hook/window-size':
         specifier: 3.1.1
         version: 3.1.1(react@19.2.0)
-      '@remixicon/react':
-        specifier: 4.7.0
-        version: 4.7.0(react@19.2.0)
       '@t3-oss/env-core':
         specifier: 'catalog:'
         version: 0.13.8(typescript@5.9.3)(zod@4.1.13)
       '@tanstack/react-query':
         specifier: 5.90.11
         version: 5.90.11(react@19.2.0)
+      '@tanstack/react-virtual':
+        specifier: 3.13.12
+        version: 3.13.12(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
       '@use-gesture/react':
         specifier: 10.3.1
         version: 10.3.1(react@19.2.0)
@@ -1095,9 +1095,6 @@ importers:
       '@react-hook/window-size':
         specifier: 3.1.1
         version: 3.1.1(react@19.2.0)
-      '@remixicon/react':
-        specifier: 4.7.0
-        version: 4.7.0(react@19.2.0)
       '@tanstack/react-form':
         specifier: 1.26.0
         version: 1.26.0(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
@@ -1279,6 +1276,9 @@ importers:
 
   be/apps/oauth-gateway:
     dependencies:
+      '@afilmory/be-utils':
+        specifier: workspace:*
+        version: link:../../packages/utils
       '@afilmory/utils':
         specifier: workspace:*
         version: link:../../../packages/utils
@@ -4882,11 +4882,6 @@ packages:
     resolution: {integrity: sha512-O3rHJzAQKamUz1fvE0Qaw0xSFqsA/yafi2iqeE0pvdFtCO1viYx8QL6f3Ln/aCCTLxs68SLf0KPM9eSeM8yBnA==}
     engines: {node: '>=14.0.0'}
 
-  '@remixicon/react@4.7.0':
-    resolution: {integrity: sha512-ODBQjdbOjnFguCqctYkpDjERXOInNaBnRPDKfZOBvbzExBAwr2BaH/6AHFTg/UAFzBDkwtylfMT8iKPAkLwPLQ==}
-    peerDependencies:
-      react: '>=18.2.0'
-
   '@resvg/resvg-js-android-arm-eabi@2.6.2':
     resolution: {integrity: sha512-FrJibrAk6v29eabIPgcTUMPXiEz8ssrAk7TXxsiZzww9UTQ1Z5KAbFJs+Z0Ez+VZTYgnE5IQJqBcoSiMebtPHA==}
     engines: {node: '>= 10'}
@@ -8379,7 +8374,6 @@ packages:
   glob@13.0.0:
     resolution: {integrity: sha512-tvZgpqk6fz4BaNZ66ZsRaZnbHvP/jG3uKJvAZOwEVUL4RTA5nJeeLYfyN9/VA8NX/V3IBG+hkeuGpKjvELkVhA==}
     engines: {node: 20 || >=22}
-    hasBin: true
 
   glob@7.2.3:
     resolution: {integrity: sha512-nFR0zLpU2YCaRxwoCJvL6UvCH2JFyFVIvwTLsIf21AuHlMskA1hhTdk+LlYJtOlYt9v6dvszD2BGRqBL+iQK9Q==}
@@ -16350,10 +16344,6 @@ snapshots:
 
   '@remix-run/router@1.23.0':
     optional: true
-
-  '@remixicon/react@4.7.0(react@19.2.0)':
-    dependencies:
-      react: 19.2.0
 
   '@resvg/resvg-js-android-arm-eabi@2.6.2':
     optional: true

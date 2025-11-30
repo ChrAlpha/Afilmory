@@ -9,6 +9,7 @@
     "start": "node dist/main.js"
   },
   "dependencies": {
+    "@afilmory/be-utils": "workspace:*",
     "@afilmory/utils": "workspace:*",
     "@hono/node-server": "^1.13.5",
     "hono": "^4.10.7",
