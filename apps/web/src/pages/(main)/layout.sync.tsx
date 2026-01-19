@@ -107,27 +107,89 @@ const useSyncStateToUrl = () => {
   const navigate = useNavigate()
 
   const location = useLocation()
-  const { isOpen, currentIndex } = usePhotoViewer()
+  const { isOpen, currentIndex, closeViewer } = usePhotoViewer()
+
+  // Track previous pathname to detect navigation direction
+  const prevPathnameRef = useRef<string | undefined>(undefined)
+
+  // Track if navigation was triggered by browser back/forward
+  const isPopstateNavigationRef = useRef(false)
+
+  // Listen for browser back/forward navigation
+  useEffect(() => {
+    const handlePopstate = () => {
+      isPopstateNavigationRef.current = true
+      // Reset after microtask to catch the location change
+      queueMicrotask(() => {
+        isPopstateNavigationRef.current = false
+      })
+    }
+
+    window.addEventListener('popstate', handlePopstate)
+    return () => window.removeEventListener('popstate', handlePopstate)
+  }, [])
 
   useEffect(() => {
     if (!isRestored) return
 
+    const prevPathname = prevPathnameRef.current
+    const currentPathname = location.pathname
+    const isOnPhotoPage = currentPathname.startsWith('/photos/')
+    const wasOnPhotoPage = prevPathname?.startsWith('/photos/') ?? false
+    const isExploryPath = currentPathname === '/explory'
+
+    // Always update prev pathname at the end
+    const cleanup = () => {
+      prevPathnameRef.current = currentPathname
+    }
+
     if (!isOpen) {
-      const isExploryPath = location.pathname === '/explory'
-      if (!isExploryPath) {
+      // Viewer is closed - navigate to root if we're still on a photo page
+      if (!isExploryPath && isOnPhotoPage) {
         const timer = setTimeout(() => {
           navigate('/')
         }, 500)
+        cleanup()
         return () => clearTimeout(timer)
       }
-    } else {
+      cleanup()
+      return
+    }
+
+    // Viewer is open
+    if (!isOnPhotoPage) {
+      // Determine if this is browser-initiated or app-initiated
+      // Browser back: popstate fired OR we were on a photo page before
+      const isBrowserBack = isPopstateNavigationRef.current || wasOnPhotoPage
+
+      if (isBrowserBack) {
+        // Browser back was pressed - close the viewer
+        closeViewer()
+        cleanup()
+        return
+      }
+
+      // App-initiated: user clicked a photo, navigate to it
       const photos = getFilteredPhotos()
-      const targetPathname = `/photos/${photos[currentIndex].id}`
-      if (location.pathname !== targetPathname) {
+      const photo = photos[currentIndex]
+      if (photo) {
+        navigate(`/photos/${photo.id}`)
+      }
+      cleanup()
+      return
+    }
+
+    // On a photo page with viewer open - sync URL to current index
+    const photos = getFilteredPhotos()
+    const photo = photos[currentIndex]
+    if (photo) {
+      const targetPathname = `/photos/${photo.id}`
+      if (currentPathname !== targetPathname) {
         navigate(targetPathname)
       }
     }
-  }, [currentIndex, isOpen, location.pathname, navigate])
+    cleanup()
+  }, [currentIndex, isOpen, location.pathname, navigate, closeViewer])
 
   useEffect(() => {
     if (!isRestored) return
