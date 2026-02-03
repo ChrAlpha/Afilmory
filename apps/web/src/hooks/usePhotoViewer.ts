@@ -127,8 +127,8 @@ export const usePhotoViewer = () => {
   const { photoId: urlPhotoId } = useParams()
   const viewerState = useAtomValue(viewerAtom)
 
-  // Derive isOpen from URL - viewer is open if we're on a photo route
-  const isOpen = location.pathname.startsWith('/photos/')
+  // Derive isOpen from URL params - viewer is open if a photoId param is present
+  const isOpen = !!urlPhotoId
 
   // Derive currentIndex from URL photo ID
   const currentIndex = useMemo(() => {
@@ -205,7 +205,7 @@ export const usePhotoViewer = () => {
         }))
 
         // Create history entry for each photo navigation to support browser back/forward
-        navigate(`/photos/${photo.id}${location.search}`)
+        navigate(`/photos/${photo.id}${location.search}`, { replace: true })
 
         trackView(photo.id)
       }
