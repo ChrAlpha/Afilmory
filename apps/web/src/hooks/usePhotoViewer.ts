@@ -191,6 +191,11 @@ export const usePhotoViewer = () => {
       if (index >= 0 && index < photos.length) {
         const photo = photos[index]
 
+        // Skip if URL already points to this photo (prevents loop on browser back/forward)
+        if (urlPhotoId === photo.id) {
+          return
+        }
+
         // Prevent sync loop
         setSyncingFromUrl(false)
 
@@ -199,13 +204,13 @@ export const usePhotoViewer = () => {
           photoId: photo.id,
         }))
 
-        // Use replace to avoid polluting history when navigating within viewer
-        navigate(`/photos/${photo.id}${location.search}`, { replace: true })
+        // Create history entry for each photo navigation to support browser back/forward
+        navigate(`/photos/${photo.id}${location.search}`)
 
         trackView(photo.id)
       }
     },
-    [photos, navigate, location.search],
+    [photos, navigate, location.search, urlPhotoId],
   )
 
   return {
