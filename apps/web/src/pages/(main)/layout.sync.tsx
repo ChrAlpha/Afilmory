@@ -4,11 +4,12 @@ import { useEffect, useRef } from 'react'
 import { Outlet, useLocation, useParams, useSearchParams } from 'react-router'
 
 import { gallerySettingAtom } from '~/atoms/app'
-import { getViewer,setSyncingFromUrl, setViewer } from '~/atoms/viewer'
+import { getViewer, setSyncingFromUrl, setViewer } from '~/atoms/viewer'
 import { siteConfig } from '~/config'
 import { useMobile } from '~/hooks/useMobile'
 import { usePhotos } from '~/hooks/usePhotoViewer'
 import { PhotosRoot } from '~/modules/gallery/PhotosRoot'
+import { GlobalPhotoViewer } from '~/modules/viewer/GlobalPhotoViewer'
 import { PhotosProvider } from '~/providers/photos-provider'
 
 export const Component = () => {
@@ -46,6 +47,7 @@ export const Component = () => {
         )}
 
         <Outlet />
+        <GlobalPhotoViewer />
       </PhotosProvider>
     </>
   )
