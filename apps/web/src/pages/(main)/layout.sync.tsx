@@ -4,7 +4,7 @@ import { useEffect, useRef } from 'react'
 import { Outlet, useLocation, useParams, useSearchParams } from 'react-router'
 
 import { gallerySettingAtom } from '~/atoms/app'
-import { getViewer,setSyncingFromUrl, setViewer } from '~/atoms/viewer'
+import { getViewer, setSyncingFromUrl, setViewer } from '~/atoms/viewer'
 import { siteConfig } from '~/config'
 import { useMobile } from '~/hooks/useMobile'
 import { usePhotos } from '~/hooks/usePhotoViewer'
@@ -88,9 +88,9 @@ const useSyncGallerySettingsWithUrl = () => {
 
     lastSyncedUrlRef.current = currentUrl
 
-    const tagsFromSearchParams = searchParams.get('tags')?.split(',').filter(Boolean)
-    const camerasFromSearchParams = searchParams.get('cameras')?.split(',').filter(Boolean)
-    const lensesFromSearchParams = searchParams.get('lenses')?.split(',').filter(Boolean)
+    const tagsFromSearchParams = searchParams.get('tags')?.split(',')
+    const camerasFromSearchParams = searchParams.get('cameras')?.split(',')
+    const lensesFromSearchParams = searchParams.get('lenses')?.split(',')
     const ratingsFromSearchParams = searchParams.get('rating') ? Number(searchParams.get('rating')) : null
     const tagModeFromSearchParams = searchParams.get('tag_mode') as 'union' | 'intersection' | null
 
@@ -225,8 +225,8 @@ const useSyncViewerWithUrl = () => {
             ...prev,
             isOpen: true,
             photoId,
-            // Preserve trigger element only if opening new viewer
-            triggerElement: prev.isOpen ? prev.triggerElement : null,
+            // When syncing from URL, do not preserve a potentially stale triggerElement
+            triggerElement: null,
           }))
 
           // Prevent background scroll
@@ -247,6 +247,12 @@ const useSyncViewerWithUrl = () => {
         // Restore background scroll
         document.body.style.overflow = ''
       }
+    }
+
+    return () => {
+      // Clean up body scroll lock if component unmounts while viewer was open
+      // This is a safety measure, normally closeViewer handles this
+      document.body.style.overflow = ''
     }
   }, [location.pathname, photoId, photos])
 }
