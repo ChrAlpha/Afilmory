@@ -205,7 +205,7 @@ export const usePhotoViewer = () => {
         }))
 
         // Create history entry for each photo navigation to support browser back/forward
-        navigate(`/photos/${photo.id}${location.search}`, { replace: true })
+        navigate(`/photos/${photo.id}${location.search}`)
 
         trackView(photo.id)
       }
