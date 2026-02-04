@@ -4,7 +4,7 @@ import { useEffect, useRef } from 'react'
 import { Outlet, useLocation, useParams, useSearchParams } from 'react-router'
 
 import { gallerySettingAtom } from '~/atoms/app'
-import { getViewer, setSyncingFromUrl, setViewer } from '~/atoms/viewer'
+import { getViewer, setViewer } from '~/atoms/viewer'
 import { siteConfig } from '~/config'
 import { useMobile } from '~/hooks/useMobile'
 import { usePhotos } from '~/hooks/usePhotoViewer'
@@ -215,12 +215,8 @@ const useSyncViewerWithUrl = () => {
       // URL says viewer should be open
       const targetIndex = photos.findIndex((p) => p.id === photoId)
 
-      if (targetIndex !== -1) {
-        // Mark that we're syncing from URL to prevent loops
-        setSyncingFromUrl(true)
-
-        // Open viewer if closed, or update photo if different
-        if (!currentViewer.isOpen || currentViewer.photoId !== photoId) {
+      if (targetIndex !== -1 && // Open viewer if closed, or update photo if different
+        (!currentViewer.isOpen || currentViewer.photoId !== photoId)) {
           setViewer((prev) => ({
             ...prev,
             isOpen: true,
@@ -232,12 +228,9 @@ const useSyncViewerWithUrl = () => {
           // Prevent background scroll
           document.body.style.overflow = 'hidden'
         }
-      }
     } else {
       // URL says viewer should be closed
       if (currentViewer.isOpen) {
-        setSyncingFromUrl(true)
-
         setViewer((prev) => ({
           ...prev,
           isOpen: false,

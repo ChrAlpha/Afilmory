@@ -28,7 +28,3 @@ export const setViewer = (valueOrUpdater: ViewerState | ((prev: ViewerState) => 
     jotaiStore.set(viewerAtom, valueOrUpdater)
   }
 }
-
-// Flag to track if we're currently syncing from URL to prevent loops
-export const syncingFromUrlAtom = atom(false)
-export const setSyncingFromUrl = (value: boolean) => jotaiStore.set(syncingFromUrlAtom, value)

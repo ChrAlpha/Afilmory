@@ -4,7 +4,7 @@ import { use, useCallback, useMemo } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router'
 
 import { gallerySettingAtom } from '~/atoms/app'
-import { setSyncingFromUrl, setViewer, viewerAtom } from '~/atoms/viewer'
+import { setViewer, viewerAtom } from '~/atoms/viewer'
 import { jotaiStore } from '~/lib/jotai'
 import { trackView } from '~/lib/tracker'
 import { PhotosContext } from '~/providers/photos-provider'
@@ -142,9 +142,6 @@ export const usePhotoViewer = () => {
       const photo = photos[index]
       if (!photo) return
 
-      // Prevent sync loop - we're initiating this change
-      setSyncingFromUrl(false)
-
       setViewer((prev) => ({
         ...prev,
         isOpen: true,
@@ -164,9 +161,6 @@ export const usePhotoViewer = () => {
   )
 
   const closeViewer = useCallback(() => {
-    // Prevent sync loop - we're initiating this change
-    setSyncingFromUrl(false)
-
     setViewer((prev) => ({
       ...prev,
       isOpen: false,
@@ -195,9 +189,6 @@ export const usePhotoViewer = () => {
         if (urlPhotoId === photo.id) {
           return
         }
-
-        // Prevent sync loop
-        setSyncingFromUrl(false)
 
         setViewer((prev) => ({
           ...prev,
