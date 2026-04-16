@@ -6,13 +6,22 @@ import type { PhotoViewerTransition } from './types'
 
 interface PhotoViewerTransitionPreviewProps {
   transition: PhotoViewerTransition
+  onReady?: () => void
   onComplete: () => void
 }
 
-export const PhotoViewerTransitionPreview = ({ transition, onComplete }: PhotoViewerTransitionPreviewProps) => {
+export const PhotoViewerTransitionPreview = ({
+  transition,
+  onReady,
+  onComplete,
+}: PhotoViewerTransitionPreviewProps) => {
   const baseTransition = {
     duration: 0.42,
     ease: [0.22, 1, 0.36, 1] as const,
+  }
+  const entryFadeOutTransition = {
+    duration: 0.22,
+    ease: [0.32, 0.72, 0, 1] as const,
   }
   const thumbHash = typeof transition.thumbHash === 'string' ? transition.thumbHash : null
   const x = useMotionValue(transition.from.left)
@@ -21,9 +30,13 @@ export const PhotoViewerTransitionPreview = ({ transition, onComplete }: PhotoVi
   const height = useMotionValue(transition.from.height)
   const borderRadius = useMotionValue(transition.from.borderRadius)
   const rotate = useMotionValue(transition.from.rotate)
+  const opacity = useMotionValue(1)
+  const hasReadyRef = useRef(false)
   const hasCompletedRef = useRef(false)
 
   useEffect(() => {
+    opacity.set(1)
+    hasReadyRef.current = false
     hasCompletedRef.current = false
 
     const complete = () => {
@@ -32,12 +45,29 @@ export const PhotoViewerTransitionPreview = ({ transition, onComplete }: PhotoVi
       onComplete()
     }
 
+    const ready = () => {
+      if (hasReadyRef.current) return
+      hasReadyRef.current = true
+
+      if (transition.variant === 'entry') {
+        onReady?.()
+        const fadeAnimation = animate(opacity, 0, {
+          ...entryFadeOutTransition,
+          onComplete: complete,
+        })
+        animations.push(fadeAnimation)
+        return
+      }
+
+      complete()
+    }
+
     const animations = [
       animate(x, transition.to.left, baseTransition),
       animate(y, transition.to.top, baseTransition),
       animate(width, transition.to.width, {
         ...baseTransition,
-        onComplete: complete,
+        onComplete: ready,
       }),
       animate(height, transition.to.height, baseTransition),
       animate(borderRadius, transition.to.borderRadius, baseTransition),
@@ -50,7 +80,9 @@ export const PhotoViewerTransitionPreview = ({ transition, onComplete }: PhotoVi
   }, [
     borderRadius,
     height,
+    onReady,
     onComplete,
+    opacity,
     rotate,
     transition.to.borderRadius,
     transition.to.height,
@@ -58,6 +90,7 @@ export const PhotoViewerTransitionPreview = ({ transition, onComplete }: PhotoVi
     transition.to.rotate,
     transition.to.top,
     transition.to.width,
+    transition.variant,
     width,
     x,
     y,
@@ -73,6 +106,7 @@ export const PhotoViewerTransitionPreview = ({ transition, onComplete }: PhotoVi
         width,
         height,
         borderRadius,
+        opacity,
         rotate,
         transformOrigin: '50% 50%',
       }}

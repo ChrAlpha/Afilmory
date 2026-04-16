@@ -69,7 +69,8 @@ export const PhotoViewer = ({
     shouldRenderBackdrop,
     thumbHash: transitionThumbHash,
     shouldRenderThumbhash,
-    handleEntryAnimationComplete,
+    handleEntryTransitionReady,
+    handleEntryTransitionComplete,
     handleExitAnimationComplete,
   } = usePhotoViewerTransitions({
     exitOverrideFrame: dragDismissExitFrame,
@@ -287,8 +288,8 @@ export const PhotoViewer = ({
               touchAction: isMobile ? 'manipulation' : 'none',
               pointerEvents: !isViewerContentVisible || isEntryAnimating ? 'none' : 'auto',
             }}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: isViewerContentVisible ? 1 : 0 }}
+            initial={false}
+            animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={Spring.presets.snappy}
           >
@@ -312,8 +313,8 @@ export const PhotoViewer = ({
                 >
                   <m.div
                     className="group/photo-viewer relative flex min-h-0 min-w-0 flex-1"
-                    animate={{ opacity: isViewerContentVisible ? 1 : 0 }}
-                    transition={Spring.presets.snappy}
+                    initial={false}
+                    animate={{ opacity: 1 }}
                   >
                     {/* 顶部工具栏 */}
                     <m.div
@@ -409,7 +410,7 @@ export const PhotoViewer = ({
                       >
                         {photos.map((photo, index) => {
                           const isCurrentImage = index === currentIndex
-                          const hideCurrentImage = isEntryAnimating && isCurrentImage
+                          const hideCurrentImage = isCurrentImage && isEntryAnimating && !isViewerContentVisible
                           return (
                             <SwiperSlide
                               key={photo.id}
@@ -552,7 +553,8 @@ export const PhotoViewer = ({
         <PhotoViewerTransitionPreview
           key={`${entryTransition.variant}-${entryTransition.photoId}`}
           transition={entryTransition}
-          onComplete={handleEntryAnimationComplete}
+          onReady={handleEntryTransitionReady}
+          onComplete={handleEntryTransitionComplete}
         />
       )}
       {exitTransition && (

@@ -25,7 +25,8 @@ interface UsePhotoViewerTransitionsResult {
   shouldRenderBackdrop: boolean
   thumbHash: string | null
   shouldRenderThumbhash: boolean
-  handleEntryAnimationComplete: () => void
+  handleEntryTransitionReady: () => void
+  handleEntryTransitionComplete: () => void
   handleExitAnimationComplete: () => void
 }
 
@@ -321,8 +322,11 @@ export const usePhotoViewerTransitions = ({
     }
   }, [isOpen])
 
-  const handleEntryAnimationComplete = useCallback(() => {
+  const handleEntryTransitionReady = useCallback(() => {
     setIsViewerContentVisible(true)
+  }, [])
+
+  const handleEntryTransitionComplete = useCallback(() => {
     setEntryTransition(null)
   }, [])
 
@@ -347,7 +351,8 @@ export const usePhotoViewerTransitions = ({
     shouldRenderBackdrop,
     thumbHash,
     shouldRenderThumbhash,
-    handleEntryAnimationComplete,
+    handleEntryTransitionReady,
+    handleEntryTransitionComplete,
     handleExitAnimationComplete,
   }
 }

@@ -1,7 +1,7 @@
 import { clsxm } from '@afilmory/utils'
 import { WebGLImageViewer } from '@afilmory/webgl-viewer'
 import { AnimatePresence, m } from 'motion/react'
-import { useCallback, useMemo, useRef } from 'react'
+import { useCallback, useLayoutEffect, useMemo, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { ReactZoomPanPinchRef } from 'react-zoom-pan-pinch'
 import { useMediaQuery } from 'usehooks-ts'
@@ -24,6 +24,8 @@ import {
   useWebGLLoadingState,
 } from './hooks'
 import type { ProgressiveImageProps, WebGLImageViewerRef } from './types'
+
+const loadedThumbnailSrcSet = new Set<string>()
 
 export const ProgressiveImage = ({
   src,
@@ -107,8 +109,34 @@ export const ProgressiveImage = ({
   const handleWebGLLoadingStateChange = useWebGLLoadingState(loadingIndicatorRef)
 
   const handleThumbnailLoad = useCallback(() => {
+    if (thumbnailSrc) {
+      loadedThumbnailSrcSet.add(thumbnailSrc)
+    }
     setState.setIsThumbnailLoaded(true)
-  }, [setState])
+  }, [setState, thumbnailSrc])
+
+  useLayoutEffect(() => {
+    if (!thumbnailSrc) {
+      setState.setIsThumbnailLoaded(false)
+      return
+    }
+
+    const thumbnailElement = thumbnailRef.current
+    const isAlreadyLoaded =
+      loadedThumbnailSrcSet.has(thumbnailSrc) ||
+      (thumbnailElement?.currentSrc?.includes(thumbnailSrc) &&
+        thumbnailElement.complete &&
+        thumbnailElement.naturalWidth > 0) ||
+      (thumbnailElement?.src === thumbnailSrc && thumbnailElement.complete && thumbnailElement.naturalWidth > 0)
+
+    if (isAlreadyLoaded) {
+      loadedThumbnailSrcSet.add(thumbnailSrc)
+      setState.setIsThumbnailLoaded(true)
+      return
+    }
+
+    setState.setIsThumbnailLoaded(false)
+  }, [setState, thumbnailSrc])
 
   const showContextMenu = useShowContextMenu()
 
