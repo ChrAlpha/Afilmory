@@ -8,6 +8,7 @@ import { useMediaQuery } from 'usehooks-ts'
 
 import { useShowContextMenu } from '~/atoms/context-menu'
 import { SlidingNumber } from '~/components/ui/number/SlidingNumber'
+import { isMobileDevice } from '~/lib/device-viewport'
 import { canUseWebGL } from '~/lib/feature'
 import { HDRBadge } from '~/modules/media/HDRBadge'
 import { LivePhotoBadge } from '~/modules/media/LivePhotoBadge'
@@ -35,6 +36,8 @@ export const ProgressiveImage = ({
   onProgress,
   onZoomChange,
   onBlobSrcChange,
+  enableZoom = true,
+  enablePan = true,
   maxZoom = 20,
   minZoom = 1,
   isCurrentImage = false,
@@ -113,6 +116,31 @@ export const ProgressiveImage = ({
   // Only use HDR if the browser supports it and the image is HDR
   const shouldUseHDR = isHDR && isHDRSupported
 
+  const webglPinchConfig = useMemo(
+    () => ({
+      step: 0.5,
+      disabled: !enableZoom,
+    }),
+    [enableZoom],
+  )
+
+  const webglDoubleClickConfig = useMemo(
+    () => ({
+      step: 2,
+      disabled: !enableZoom,
+      mode: 'toggle' as const,
+      animationTime: 200,
+    }),
+    [enableZoom],
+  )
+
+  const webglPanningConfig = useMemo(
+    () => ({
+      disabled: !enablePan,
+    }),
+    [enablePan],
+  )
+
   return (
     <div
       className={clsxm('relative overflow-hidden', className)}
@@ -153,6 +181,8 @@ export const ProgressiveImage = ({
               onZoomChange={onDOMTransformed}
               minZoom={minZoom}
               maxZoom={maxZoom}
+              enableZoom={enableZoom}
+              enablePan={enablePan}
               src={blobSrc}
               alt={alt}
               highResLoaded={highResLoaded}
@@ -182,12 +212,15 @@ export const ProgressiveImage = ({
               initialScale={1}
               minScale={minZoom}
               maxScale={maxZoom}
+              pinch={webglPinchConfig}
+              doubleClick={webglDoubleClickConfig}
+              panning={webglPanningConfig}
               limitToBounds={true}
               centerOnInit={true}
               smooth={true}
               onZoomChange={onTransformed}
               onLoadingStateChange={handleWebGLLoadingStateChange}
-              debug={import.meta.env.DEV}
+              debug={import.meta.env.DEV && !isMobileDevice}
             />
           )}
         </div>

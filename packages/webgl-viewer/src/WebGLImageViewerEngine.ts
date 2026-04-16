@@ -1218,15 +1218,22 @@ export class WebGLImageViewerEngine extends ImageViewerEngineBase {
   }
 
   private handleTouchStart(e: TouchEvent) {
+    const canHandleSingleTouch =
+      e.touches.length === 1 && (!this.config.panning.disabled || !this.config.doubleClick.disabled)
+    const canHandlePinch = e.touches.length === 2 && !this.config.pinch.disabled
+
+    if (!canHandleSingleTouch && !canHandlePinch) {
+      return
+    }
+
     e.preventDefault()
 
     if (this.isAnimating) {
       this.isAnimating = false
       this.animationStartLOD = -1
-      return
     }
 
-    if (e.touches.length === 1 && !this.config.panning.disabled) {
+    if (e.touches.length === 1) {
       const touch = e.touches[0]
       const now = Date.now()
 
@@ -1242,9 +1249,11 @@ export class WebGLImageViewerEngine extends ImageViewerEngineBase {
         return
       }
 
-      this.isDragging = true
-      this.lastMouseX = touch.clientX
-      this.lastMouseY = touch.clientY
+      if (!this.config.panning.disabled) {
+        this.isDragging = true
+        this.lastMouseX = touch.clientX
+        this.lastMouseY = touch.clientY
+      }
 
       this.lastTouchTime = now
       this.lastTouchX = touch.clientX
@@ -1260,9 +1269,9 @@ export class WebGLImageViewerEngine extends ImageViewerEngineBase {
   }
 
   private handleTouchMove(e: TouchEvent) {
-    e.preventDefault()
-
     if (e.touches.length === 1 && this.isDragging && !this.config.panning.disabled) {
+      e.preventDefault()
+
       const deltaX = e.touches[0].clientX - this.lastMouseX
       const deltaY = e.touches[0].clientY - this.lastMouseY
 
@@ -1275,6 +1284,8 @@ export class WebGLImageViewerEngine extends ImageViewerEngineBase {
       this.constrainImagePosition()
       this.render()
     } else if (e.touches.length === 2 && !this.config.pinch.disabled) {
+      e.preventDefault()
+
       const touch1 = e.touches[0]
       const touch2 = e.touches[1]
       const distance = Math.sqrt(
