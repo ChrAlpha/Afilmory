@@ -6,11 +6,21 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useViewport } from '~/hooks/useViewport'
 
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max)
+const easeOutCubic = (value: number) => 1 - Math.pow(1 - value, 3)
+const easeOutQuad = (value: number) => 1 - Math.pow(1 - value, 2)
 
 interface MobilePhotoViewerInteractionsOptions {
   enabled: boolean
   isImageZoomed: boolean
-  onDismiss: () => void
+  onDismiss: (snapshot: MobilePhotoViewerDismissSnapshot) => void
+}
+
+export interface MobilePhotoViewerDismissSnapshot {
+  borderRadius: number
+  rotate: number
+  scale: number
+  translateX: number
+  translateY: number
 }
 
 export const usePhotoViewerMobileInteractions = ({
@@ -83,16 +93,43 @@ export const usePhotoViewerMobileInteractions = ({
     [registerAnimation],
   )
 
+  const getDismissPresentationSnapshot = useCallback(
+    (translateX = dismissX.get(), translateY = dismissY.get()): MobilePhotoViewerDismissSnapshot => {
+      const dismissRatio = clamp(translateY / Math.max(dismissTravel, 1), 0, 1)
+      const dismissVisual = easeOutQuad(dismissRatio)
+
+      return {
+        translateX,
+        translateY,
+        scale: clamp(1 - dismissVisual * 0.13, 0.8, 1),
+        rotate: (translateX / Math.max(viewportWidth, 1)) * (4.5 + dismissVisual * 2.5),
+        borderRadius: dismissVisual * 22,
+      }
+    },
+    [dismissTravel, dismissX, dismissY, viewportWidth],
+  )
+
   const settleInspector = useCallback(
     (open: boolean, velocity = 0) => {
       stopAnimations()
       if (isClosingRef.current) return
       setIsInspectorVisible(open)
-      springValue(inspectorProgress, open ? 1 : 0, velocity * inspectorRevealDistance * 0.35)
-      springValue(dismissX, 0)
-      springValue(dismissY, 0, velocity * 120)
+
+      registerAnimation(
+        animate(inspectorProgress, open ? 1 : 0, {
+          ...(open ? Spring.snappy(0.46, 0.03) : Spring.smooth(0.34)),
+          velocity: velocity * inspectorRevealDistance * 0.3,
+        }),
+      )
+      registerAnimation(animate(dismissX, 0, Spring.smooth(0.32)))
+      registerAnimation(
+        animate(dismissY, 0, {
+          ...(open ? Spring.smooth(0.42) : Spring.snappy(0.36, 0.02)),
+          velocity: velocity * 90,
+        }),
+      )
     },
-    [dismissX, dismissY, inspectorProgress, inspectorRevealDistance, springValue, stopAnimations],
+    [dismissX, dismissY, inspectorProgress, inspectorRevealDistance, registerAnimation, stopAnimations],
   )
 
   const dismissWithThrow = useCallback(
@@ -105,27 +142,43 @@ export const usePhotoViewerMobileInteractions = ({
       stopAnimations()
       inspectorProgress.set(0)
 
-      const targetX = dismissX.get() + velocityX * 200
-      const targetY = Math.max(dismissTravel, dismissY.get() + velocityY * 340)
+      const clampedVelocityX = clamp(velocityX, -2.2, 2.2)
+      const clampedVelocityY = clamp(velocityY, 0.72, 2.8)
+      const currentX = dismissX.get()
+      const currentY = dismissY.get()
+      const throwDistanceY = clamp(viewportHeight * (0.06 + clampedVelocityY * 0.045), 56, 168)
+      const throwDistanceX = clamp(clampedVelocityX * viewportWidth * 0.12, -viewportWidth * 0.16, viewportWidth * 0.16)
+      const targetX = clamp(currentX + throwDistanceX, -viewportWidth * 0.28, viewportWidth * 0.28)
+      const targetY = clamp(currentY + throwDistanceY, currentY + 40, viewportHeight * 0.42)
 
       registerAnimation(
         animate(dismissX, targetX, {
-          ...Spring.presets.smooth,
-          velocity: velocityX * 180,
+          ...Spring.snappy(0.18, 0.06),
+          velocity: clampedVelocityX * viewportWidth * 0.14,
         }),
       )
 
       registerAnimation(
         animate(dismissY, targetY, {
-          ...Spring.presets.snappy,
-          velocity: Math.max(velocityY * 260, 220),
+          ...Spring.snappy(0.18, 0.04),
+          velocity: Math.max(clampedVelocityY * viewportHeight * 0.08, 160),
           onComplete: () => {
-            onDismiss()
+            onDismiss(getDismissPresentationSnapshot(targetX, targetY))
           },
         }),
       )
     },
-    [dismissTravel, dismissX, dismissY, inspectorProgress, onDismiss, registerAnimation, stopAnimations],
+    [
+      dismissX,
+      dismissY,
+      getDismissPresentationSnapshot,
+      inspectorProgress,
+      onDismiss,
+      registerAnimation,
+      stopAnimations,
+      viewportHeight,
+      viewportWidth,
+    ],
   )
 
   const openInspector = useCallback(() => {
@@ -199,9 +252,12 @@ export const usePhotoViewerMobileInteractions = ({
           dismissX.set(0)
           dismissY.set(0)
         } else {
+          const nextDismissY = clamp(-nextInspectorPixels, 0, dismissTravel)
+          const dismissRatio = nextDismissY / Math.max(dismissTravel, 1)
+
           inspectorProgress.set(0)
-          dismissY.set(clamp(-nextInspectorPixels, 0, dismissTravel))
-          dismissX.set(mx * 0.24)
+          dismissY.set(nextDismissY)
+          dismissX.set(clamp(mx * (0.18 + dismissRatio * 0.12), -viewportWidth * 0.24, viewportWidth * 0.24))
         }
       }
 
@@ -247,24 +303,35 @@ export const usePhotoViewerMobileInteractions = ({
   )
 
   const dismissProgress = useTransform(dismissY, [0, dismissTravel], [0, 1])
-  const viewerScale = useTransform(() => clamp(1 - dismissProgress.get() * 0.12, 0.82, 1))
-  const viewerRotate = useTransform(() => (dismissX.get() / Math.max(viewportWidth, 1)) * 6)
-  const viewerLiftY = useTransform(() => dismissY.get())
-  const viewerBorderRadius = useTransform(() => dismissProgress.get() * 18)
-  const backdropOpacity = useTransform(() => clamp(1 - dismissProgress.get() * 0.82, 0.12, 1))
+  const inspectorVisualProgress = useTransform(() => easeOutCubic(inspectorProgress.get()))
+  const dismissVisualProgress = useTransform(() => easeOutQuad(dismissProgress.get()))
+  const viewerScale = useTransform(() =>
+    clamp(1 - inspectorVisualProgress.get() * 0.022 - dismissVisualProgress.get() * 0.13, 0.8, 1),
+  )
+  const viewerRotate = useTransform(
+    () => (dismissX.get() / Math.max(viewportWidth, 1)) * (4.5 + dismissVisualProgress.get() * 2.5),
+  )
+  const viewerLiftY = useTransform(
+    () => dismissY.get() - inspectorVisualProgress.get() * 18 - dismissVisualProgress.get() * 8,
+  )
+  const viewerBorderRadius = useTransform(() => inspectorVisualProgress.get() * 14 + dismissVisualProgress.get() * 22)
+  const backdropOpacity = useTransform(() =>
+    clamp(1 - dismissVisualProgress.get() * 0.84 - inspectorVisualProgress.get() * 0.08, 0.08, 1),
+  )
   const chromeOpacity = useTransform(() =>
-    clamp(1 - inspectorProgress.get() * 0.72 - dismissProgress.get() * 0.48, 0, 1),
+    clamp(1 - inspectorVisualProgress.get() * 0.92 - dismissVisualProgress.get() * 0.52, 0, 1),
   )
-  const chromeY = useTransform(() => dismissY.get() * 0.08)
+  const chromeY = useTransform(
+    () => dismissY.get() * 0.08 - inspectorVisualProgress.get() * 12 - dismissVisualProgress.get() * 6,
+  )
   const thumbnailsOpacity = useTransform(() => {
-    const inspectorOpacity =
-      inspectorProgress.get() <= 0.08 ? 1 : clamp(1 - (inspectorProgress.get() - 0.08) / 0.18, 0, 1)
-
-    return clamp(inspectorOpacity - dismissProgress.get() * 0.55, 0, 1)
+    return clamp(1 - inspectorVisualProgress.get() * 1.05 - dismissVisualProgress.get() * 0.58, 0, 1)
   })
+  const thumbnailsY = useTransform(() => inspectorVisualProgress.get() * 18 + dismissVisualProgress.get() * 10)
   const stageHintOpacity = useTransform(() =>
-    clamp(0.24 + inspectorProgress.get() * 0.36 - dismissProgress.get() * 0.5, 0, 0.8),
+    clamp(0.42 - inspectorVisualProgress.get() * 0.66 - dismissVisualProgress.get() * 0.54, 0, 0.42),
   )
+  const stageHintY = useTransform(() => inspectorVisualProgress.get() * 10 + dismissVisualProgress.get() * 12)
 
   return {
     bindStage,
@@ -278,7 +345,9 @@ export const usePhotoViewerMobileInteractions = ({
     reset,
     settleInspector,
     stageHintOpacity,
+    stageHintY,
     thumbnailsOpacity,
+    thumbnailsY,
     toggleInspector,
     viewerBorderRadius,
     viewerLiftY,

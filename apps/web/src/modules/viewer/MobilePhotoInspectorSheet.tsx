@@ -1,7 +1,7 @@
 import type { PickedExif } from '@afilmory/builder'
 import { MobileTabGroup, MobileTabItem } from '@afilmory/ui'
 import { useQuery } from '@tanstack/react-query'
-import { m, type MotionValue,useTransform } from 'motion/react'
+import { m, type MotionValue, useTransform } from 'motion/react'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -22,6 +22,7 @@ interface MobilePhotoInspectorSheetProps {
 }
 
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max)
+const easeOutCubic = (value: number) => 1 - Math.pow(1 - value, 3)
 
 export const MobilePhotoInspectorSheet = ({
   currentPhoto,
@@ -57,19 +58,26 @@ export const MobilePhotoInspectorSheet = ({
     }
   }, [progress])
 
-  const sheetY = useTransform(progress, [0, 1], [sheetHeight + 28, 0])
+  const sheetProgress = useTransform(() => easeOutCubic(progress.get()))
+  const sheetY = useTransform(() => (1 - sheetProgress.get()) * (sheetHeight + 28))
+  const sheetOpacity = useTransform(() => clamp(progress.get() * 1.6, 0, 1))
+  const sheetScale = useTransform(() => 0.965 + sheetProgress.get() * 0.035)
+
   return (
     <m.div
       className="pointer-events-none fixed inset-x-0 bottom-0 z-30 flex justify-center"
       aria-hidden={!isInteractive}
       style={{
         y: sheetY,
+        opacity: sheetOpacity,
       }}
     >
       <m.div
         className="bg-material-ultra-thick border-accent/20 pointer-events-auto relative flex w-full max-w-screen-lg flex-col overflow-hidden rounded-t-[28px] border text-white backdrop-blur-3xl"
         style={{
           height: sheetHeight,
+          scale: sheetScale,
+          transformOrigin: '50% 100%',
           boxShadow:
             '0 -20px 64px color-mix(in srgb, var(--color-accent) 16%, transparent), 0 -8px 28px rgba(0, 0, 0, 0.32)',
           pointerEvents: isInteractive ? 'auto' : 'none',

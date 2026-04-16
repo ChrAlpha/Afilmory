@@ -7,6 +7,7 @@ import type { AnimationFrameRect, PhotoViewerTransition, PhotoViewerTransitionSt
 import { computeViewerImageFrame, escapeAttributeValue, getBorderRadius } from './utils'
 
 interface UsePhotoViewerTransitionsParams {
+  exitOverrideFrame?: AnimationFrameRect | null
   isOpen: boolean
   triggerElement: HTMLElement | null
   currentPhoto: PhotoManifest | undefined
@@ -29,6 +30,7 @@ interface UsePhotoViewerTransitionsResult {
 }
 
 export const usePhotoViewerTransitions = ({
+  exitOverrideFrame = null,
   isOpen,
   triggerElement,
   currentPhoto,
@@ -157,16 +159,16 @@ export const usePhotoViewerTransitions = ({
       triggerEl instanceof HTMLImageElement && triggerEl.parentElement ? triggerEl.parentElement : triggerEl,
     )
 
-    setIsViewerContentVisible(true)
     viewerImageFrameRef.current = {
       left: targetFrame.left,
       top: targetFrame.top,
       width: targetFrame.width,
       height: targetFrame.height,
       borderRadius: targetFrame.borderRadius,
+      rotate: targetFrame.rotate,
     }
 
-    const frameForAnimation = viewerImageFrameRef.current
+    const frameForAnimation = viewerImageFrameRef.current ?? targetFrame
 
     const transitionState: PhotoViewerTransitionState = {
       photoId: currentPhoto.id,
@@ -178,6 +180,7 @@ export const usePhotoViewerTransitions = ({
         width: fromRect.width,
         height: fromRect.height,
         borderRadius: triggerBorderRadius,
+        rotate: 0,
       },
       to: {
         left: frameForAnimation.left,
@@ -185,6 +188,7 @@ export const usePhotoViewerTransitions = ({
         width: frameForAnimation.width,
         height: frameForAnimation.height,
         borderRadius: frameForAnimation.borderRadius,
+        rotate: frameForAnimation.rotate,
       },
     }
 
@@ -234,13 +238,7 @@ export const usePhotoViewerTransitions = ({
 
     const viewportRect = viewerBoundsRef.current ?? containerRef.current?.getBoundingClientRect() ?? null
     const computedFrame = computeViewerImageFrame(currentPhoto, viewportRect, isMobile)
-    const viewerFrame = viewerImageFrameRef.current ?? {
-      left: computedFrame.left,
-      top: computedFrame.top,
-      width: computedFrame.width,
-      height: computedFrame.height,
-      borderRadius: computedFrame.borderRadius,
-    }
+    const viewerFrame = exitOverrideFrame ?? viewerImageFrameRef.current ?? computedFrame
 
     if (!viewerFrame.width || !viewerFrame.height) {
       wasOpenRef.current = false
@@ -279,6 +277,7 @@ export const usePhotoViewerTransitions = ({
         width: viewerFrame.width,
         height: viewerFrame.height,
         borderRadius: viewerFrame.borderRadius,
+        rotate: viewerFrame.rotate,
       },
       to: {
         left: targetRect.left,
@@ -286,6 +285,7 @@ export const usePhotoViewerTransitions = ({
         width: targetRect.width,
         height: targetRect.height,
         borderRadius,
+        rotate: 0,
       },
     }
 
@@ -296,6 +296,7 @@ export const usePhotoViewerTransitions = ({
     isOpen,
     currentPhoto,
     currentBlobSrc,
+    exitOverrideFrame,
     isMobile,
     resolveTriggerElement,
     restoreTriggerElementVisibility,

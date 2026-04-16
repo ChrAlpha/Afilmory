@@ -58,12 +58,6 @@ export const Component = () => {
     }
   }, [])
 
-  const handleImmediateClose = useCallback(() => {
-    isCloseActiveRef.current = false
-    setIsClosing(false)
-    closeViewerRef.current()
-  }, [])
-
   useEffect(() => {
     const current = photos[photoViewer.currentIndex]
     if (!current) return
@@ -125,7 +119,6 @@ export const Component = () => {
             isOpen={isOpen}
             triggerElement={photoViewer.triggerElement}
             onClose={handleClose}
-            onImmediateClose={handleImmediateClose}
             onIndexChange={photoViewer.goToIndex}
             onExitComplete={handleExitComplete}
           />

@@ -21,10 +21,13 @@ import type { PhotoManifest } from '~/types/photo'
 
 import { ReactionRail } from '../social'
 import { PhotoViewerTransitionPreview } from './animations/PhotoViewerTransitionPreview'
+import type { AnimationFrameRect } from './animations/types'
 import { usePhotoViewerTransitions } from './animations/usePhotoViewerTransitions'
+import { computeViewerImageFrame, projectViewerImageFrame } from './animations/utils'
 import { GalleryThumbnail } from './GalleryThumbnail'
 import { MobilePhotoInspectorSheet } from './MobilePhotoInspectorSheet'
 import { ProgressiveImage } from './ProgressiveImage'
+import type { MobilePhotoViewerDismissSnapshot } from './usePhotoViewerMobileInteractions'
 import { usePhotoViewerMobileInteractions } from './usePhotoViewerMobileInteractions'
 
 interface PhotoViewerProps {
@@ -32,7 +35,7 @@ interface PhotoViewerProps {
   currentIndex: number
   isOpen: boolean
   onClose: () => void
-  onImmediateClose?: () => void
+  onDragDismiss?: (frame: AnimationFrameRect) => void
   onIndexChange: (index: number) => void
   triggerElement: HTMLElement | null
   onExitComplete?: () => void
@@ -43,7 +46,7 @@ export const PhotoViewer = ({
   currentIndex,
   isOpen,
   onClose,
-  onImmediateClose,
+  onDragDismiss,
   onIndexChange,
   triggerElement,
   onExitComplete,
@@ -54,35 +57,9 @@ export const PhotoViewer = ({
   const [isImageZoomed, setIsImageZoomed] = useState(false)
   const [isDesktopInspectorVisible, setIsDesktopInspectorVisible] = useState(!isMobile)
   const [currentBlobSrc, setCurrentBlobSrc] = useState<string | null>(null)
+  const [dragDismissExitFrame, setDragDismissExitFrame] = useState<AnimationFrameRect | null>(null)
 
   const currentPhoto = photos[currentIndex]
-  const {
-    bindStage,
-    closeInspector,
-    dismissX,
-    inspectorProgress,
-    isInspectorVisible: isMobileInspectorVisible,
-    isVerticalGestureActive,
-    reset: resetMobileInteractions,
-    stageHintOpacity,
-    thumbnailsOpacity,
-    toggleInspector,
-    viewerBorderRadius,
-    viewerLiftY,
-    viewerRotate,
-    viewerScale,
-    backdropOpacity,
-    chromeOpacity,
-    chromeY,
-  } = usePhotoViewerMobileInteractions({
-    enabled: isMobile && isOpen,
-    isImageZoomed,
-    onDismiss: onImmediateClose ?? onClose,
-  })
-  const isInspectorVisible = isMobile ? isMobileInspectorVisible : isDesktopInspectorVisible
-  const isMobileChromeInteractive = !isMobile || !isMobileInspectorVisible
-  const mobileChromeButtonClassName = isMobileChromeInteractive ? 'pointer-events-auto' : 'pointer-events-none'
-
   const {
     containerRef,
     entryTransition,
@@ -95,6 +72,7 @@ export const PhotoViewer = ({
     handleEntryAnimationComplete,
     handleExitAnimationComplete,
   } = usePhotoViewerTransitions({
+    exitOverrideFrame: dragDismissExitFrame,
     isOpen,
     triggerElement,
     currentPhoto,
@@ -103,14 +81,75 @@ export const PhotoViewer = ({
     onExitComplete,
   })
 
+  const handleCloseRequest = useCallback(() => {
+    setDragDismissExitFrame(null)
+    onClose()
+  }, [onClose])
+
+  const handleDragDismiss = useCallback(
+    (snapshot: MobilePhotoViewerDismissSnapshot) => {
+      if (!currentPhoto) {
+        handleCloseRequest()
+        return
+      }
+
+      const viewportRect =
+        containerRef.current?.getBoundingClientRect() ?? new DOMRect(0, 0, window.innerWidth, window.innerHeight)
+      const baseFrame = computeViewerImageFrame(currentPhoto, viewportRect, true)
+      const projectedFrame = projectViewerImageFrame(baseFrame, viewportRect, snapshot)
+
+      setDragDismissExitFrame(projectedFrame)
+      onDragDismiss?.(projectedFrame)
+      onClose()
+    },
+    [containerRef, currentPhoto, handleCloseRequest, onClose, onDragDismiss],
+  )
+
+  const {
+    bindStage,
+    closeInspector,
+    dismissX,
+    inspectorProgress,
+    isInspectorVisible: isMobileInspectorVisible,
+    isVerticalGestureActive,
+    reset: resetMobileInteractions,
+    stageHintOpacity,
+    stageHintY,
+    thumbnailsOpacity,
+    thumbnailsY,
+    toggleInspector,
+    viewerBorderRadius,
+    viewerLiftY,
+    viewerRotate,
+    viewerScale,
+    backdropOpacity,
+    chromeOpacity,
+    chromeY,
+  } = usePhotoViewerMobileInteractions({
+    enabled: isMobile && isOpen,
+    isImageZoomed,
+    onDismiss: handleDragDismiss,
+  })
+  const isInspectorVisible = isMobile ? isMobileInspectorVisible : isDesktopInspectorVisible
+  const isMobileChromeInteractive = !isMobile || !isMobileInspectorVisible
+  const mobileChromeButtonClassName = isMobileChromeInteractive ? 'pointer-events-auto' : 'pointer-events-none'
+
+  useEffect(() => {
+    if (isOpen) {
+      setDragDismissExitFrame(null)
+    }
+  }, [isOpen])
+
   useEffect(() => {
     if (!isOpen) {
       setIsImageZoomed(false)
       setIsDesktopInspectorVisible(!isMobile)
       setCurrentBlobSrc(null)
-      resetMobileInteractions()
+      if (!dragDismissExitFrame) {
+        resetMobileInteractions()
+      }
     }
-  }, [isMobile, isOpen, resetMobileInteractions])
+  }, [dragDismissExitFrame, isMobile, isOpen, resetMobileInteractions])
 
   const handlePrevious = useCallback(() => {
     if (currentIndex > 0) {
@@ -132,6 +171,7 @@ export const PhotoViewer = ({
       swiperRef.current.slideTo(currentIndex, 300)
     }
     // 切换图片时重置缩放状态
+    setDragDismissExitFrame(null)
     setIsImageZoomed(false)
     if (isMobile) {
       resetMobileInteractions()
@@ -186,7 +226,7 @@ export const PhotoViewer = ({
         }
         case 'Escape': {
           event.preventDefault()
-          onClose()
+          handleCloseRequest()
           break
         }
       }
@@ -196,7 +236,7 @@ export const PhotoViewer = ({
     return () => {
       document.removeEventListener('keydown', handleKeyDown)
     }
-  }, [isOpen, handlePrevious, handleNext, onClose])
+  }, [isOpen, handleCloseRequest, handlePrevious, handleNext])
 
   if (!currentPhoto) return null
 
@@ -334,7 +374,7 @@ export const PhotoViewer = ({
                           type="button"
                           disabled={!isMobileChromeInteractive}
                           className={`bg-material-ultra-thick ${mobileChromeButtonClassName} flex size-8 items-center justify-center rounded-full text-white backdrop-blur-2xl duration-200 hover:bg-black/40 disabled:cursor-default`}
-                          onClick={onClose}
+                          onClick={handleCloseRequest}
                         >
                           <i className="i-mingcute-close-line" />
                         </button>
@@ -431,7 +471,7 @@ export const PhotoViewer = ({
                       {isMobile && (
                         <m.div
                           className="bg-material-ultra-thick pointer-events-none absolute bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full px-3 py-1 text-xs text-white/70 backdrop-blur-xl"
-                          style={{ opacity: stageHintOpacity }}
+                          style={{ opacity: stageHintOpacity, y: stageHintY }}
                         >
                           <i className="i-mingcute-arrow-up-line text-sm" />
                           <i className="i-mingcute-information-line text-sm" />
@@ -469,7 +509,7 @@ export const PhotoViewer = ({
                   </m.div>
 
                   <m.div
-                    style={isMobile ? { opacity: thumbnailsOpacity } : undefined}
+                    style={isMobile ? { opacity: thumbnailsOpacity, y: thumbnailsY } : undefined}
                     className={isMobile && isInspectorVisible ? 'pointer-events-none' : undefined}
                   >
                     <Suspense>
