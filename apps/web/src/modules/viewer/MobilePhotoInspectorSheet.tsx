@@ -50,7 +50,7 @@ export const MobilePhotoInspectorSheet = ({
 
   useEffect(() => {
     const unsubscribe = progress.on('change', (latest) => {
-      setIsInteractive(latest > 0.02)
+      setIsInteractive(clamp(latest, 0, 1) > 0.02)
     })
 
     return () => {
@@ -58,9 +58,10 @@ export const MobilePhotoInspectorSheet = ({
     }
   }, [progress])
 
-  const sheetProgress = useTransform(() => easeOutCubic(progress.get()))
+  const clampedProgress = useTransform(() => clamp(progress.get(), 0, 1))
+  const sheetProgress = useTransform(() => easeOutCubic(clampedProgress.get()))
   const sheetY = useTransform(() => (1 - sheetProgress.get()) * (sheetHeight + 28))
-  const sheetOpacity = useTransform(() => clamp(progress.get() * 1.6, 0, 1))
+  const sheetOpacity = useTransform(() => clamp(clampedProgress.get() * 1.6, 0, 1))
   const sheetScale = useTransform(() => 0.965 + sheetProgress.get() * 0.035)
 
   return (

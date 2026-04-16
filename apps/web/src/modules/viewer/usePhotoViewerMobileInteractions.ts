@@ -67,7 +67,7 @@ export const usePhotoViewerMobileInteractions = ({
 
   useEffect(() => {
     const unsubscribe = inspectorProgress.on('change', (latest) => {
-      setIsInspectorVisible(latest > 0.02)
+      setIsInspectorVisible(clamp(latest, 0, 1) > 0.02)
     })
 
     return () => {
@@ -113,23 +113,19 @@ export const usePhotoViewerMobileInteractions = ({
     (open: boolean, velocity = 0) => {
       stopAnimations()
       if (isClosingRef.current) return
-      setIsInspectorVisible(open)
+      const clampedVelocity = clamp(velocity, -2.2, 2.2)
+      const settleVelocity = open ? Math.max(clampedVelocity, 0) : Math.min(clampedVelocity, 0)
 
       registerAnimation(
         animate(inspectorProgress, open ? 1 : 0, {
-          ...(open ? Spring.snappy(0.46, 0.03) : Spring.smooth(0.34)),
-          velocity: velocity * inspectorRevealDistance * 0.3,
+          ...Spring.smooth(open ? 0.32 : 0.28),
+          velocity: settleVelocity,
         }),
       )
-      registerAnimation(animate(dismissX, 0, Spring.smooth(0.32)))
-      registerAnimation(
-        animate(dismissY, 0, {
-          ...(open ? Spring.smooth(0.42) : Spring.snappy(0.36, 0.02)),
-          velocity: velocity * 90,
-        }),
-      )
+      registerAnimation(animate(dismissX, 0, Spring.smooth(0.26)))
+      registerAnimation(animate(dismissY, 0, Spring.smooth(open ? 0.28 : 0.24)))
     },
-    [dismissX, dismissY, inspectorProgress, inspectorRevealDistance, registerAnimation, stopAnimations],
+    [dismissX, dismissY, inspectorProgress, registerAnimation, stopAnimations],
   )
 
   const dismissWithThrow = useCallback(
@@ -190,8 +186,8 @@ export const usePhotoViewerMobileInteractions = ({
   }, [settleInspector])
 
   const toggleInspector = useCallback(() => {
-    settleInspector(!isInspectorVisible)
-  }, [isInspectorVisible, settleInspector])
+    settleInspector(inspectorProgress.get() <= 0.5)
+  }, [inspectorProgress, settleInspector])
 
   const bindStage = useDrag(
     ({ active, axis, event, first, last, movement: [mx, my], velocity: [vx, vy], direction: [dx, dy], memo }) => {
@@ -206,7 +202,7 @@ export const usePhotoViewerMobileInteractions = ({
         memo ??
         ({
           inspectorPixels: inspectorProgress.get() * inspectorRevealDistance,
-          startedWithInspectorOpen: isInspectorVisible,
+          startedWithInspectorOpen: inspectorProgress.get() > 0.02,
           ignore: false,
         } as const)
 
@@ -264,7 +260,8 @@ export const usePhotoViewerMobileInteractions = ({
       if (last) {
         setIsVerticalGestureActive(false)
         const startedWithInspectorOpen =
-          start.startedWithInspectorOpen || start.inspectorPixels > 0 || isInspectorVisible
+          start.startedWithInspectorOpen || start.inspectorPixels > 0 || inspectorProgress.get() > 0.02
+        const inspectorReleaseVelocity = -dy * vy
 
         if (startedWithInspectorOpen) {
           springValue(dismissX, 0)
@@ -272,7 +269,7 @@ export const usePhotoViewerMobileInteractions = ({
 
           const currentProgress = inspectorProgress.get()
           const shouldOpen = currentProgress > 0.42 || (dy < 0 && vy > 0.2)
-          settleInspector(shouldOpen, dy < 0 ? -vy : vy)
+          settleInspector(shouldOpen, inspectorReleaseVelocity)
           return start
         }
 
@@ -288,7 +285,7 @@ export const usePhotoViewerMobileInteractions = ({
 
         const currentProgress = inspectorProgress.get()
         const shouldOpen = currentProgress > 0.42 || (dy < 0 && vy > 0.2)
-        settleInspector(shouldOpen, dy < 0 ? -vy : vy)
+        settleInspector(shouldOpen, inspectorReleaseVelocity)
       }
 
       return start
@@ -303,7 +300,8 @@ export const usePhotoViewerMobileInteractions = ({
   )
 
   const dismissProgress = useTransform(dismissY, [0, dismissTravel], [0, 1])
-  const inspectorVisualProgress = useTransform(() => easeOutCubic(inspectorProgress.get()))
+  const inspectorClampedProgress = useTransform(() => clamp(inspectorProgress.get(), 0, 1))
+  const inspectorVisualProgress = useTransform(() => easeOutCubic(inspectorClampedProgress.get()))
   const dismissVisualProgress = useTransform(() => easeOutQuad(dismissProgress.get()))
   const viewerScale = useTransform(() =>
     clamp(1 - inspectorVisualProgress.get() * 0.022 - dismissVisualProgress.get() * 0.13, 0.8, 1),
@@ -338,7 +336,7 @@ export const usePhotoViewerMobileInteractions = ({
     closeInspector,
     dismissX,
     dismissY,
-    inspectorProgress,
+    inspectorProgress: inspectorClampedProgress,
     isInspectorVisible,
     isVerticalGestureActive,
     openInspector,
