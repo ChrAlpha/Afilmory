@@ -23,6 +23,8 @@ export interface ProgressiveImageProps {
   onProgress?: (progress: number) => void
   onZoomChange?: (isZoomed: boolean) => void
   onBlobSrcChange?: (blobSrc: string | null) => void
+  onVisualReadyChange?: (ready: boolean) => void
+  disableThumbnailTransition?: boolean
 
   enableZoom?: boolean
   enablePan?: boolean

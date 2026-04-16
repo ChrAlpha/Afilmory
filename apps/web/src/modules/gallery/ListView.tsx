@@ -4,7 +4,7 @@ import { useMemo, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { useMobile } from '~/hooks/useMobile'
-import { useContextPhotos, usePhotoViewer } from '~/hooks/usePhotoViewer'
+import { useContextPhotos, useOpenPhotoViewer } from '~/hooks/usePhotoViewer'
 import { formatExifData } from '~/modules/metadata'
 import type { PhotoManifest } from '~/types/photo'
 
@@ -79,7 +79,7 @@ export const ListView = ({ photos }: ListViewProps) => {
 const PhotoCard = ({ photo }: { photo: PhotoManifest }) => {
   const { i18n } = useTranslation()
   const photos = useContextPhotos()
-  const photoViewer = usePhotoViewer()
+  const openPhotoViewer = useOpenPhotoViewer()
   const imageRef = useRef<HTMLImageElement>(null)
 
   const handleClick = () => {
@@ -88,7 +88,7 @@ const PhotoCard = ({ photo }: { photo: PhotoManifest }) => {
       const triggerEl =
         imageRef.current?.parentElement instanceof HTMLElement ? imageRef.current.parentElement : imageRef.current
 
-      photoViewer.openViewer(photoIndex, triggerEl ?? undefined)
+      openPhotoViewer(photoIndex, triggerEl ?? undefined)
     }
   }
 

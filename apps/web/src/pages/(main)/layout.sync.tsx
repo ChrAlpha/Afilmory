@@ -9,6 +9,7 @@ import { siteConfig } from '~/config'
 import { useMobile } from '~/hooks/useMobile'
 import { usePhotos } from '~/hooks/usePhotoViewer'
 import { PhotosRoot } from '~/modules/gallery/PhotosRoot'
+import { PhotoViewerHost } from '~/modules/viewer/PhotoViewerHost'
 import { PhotosProvider } from '~/providers/photos-provider'
 
 export const Component = () => {
@@ -46,6 +47,7 @@ export const Component = () => {
         )}
 
         <Outlet />
+        <PhotoViewerHost />
       </PhotosProvider>
     </>
   )

@@ -38,6 +38,8 @@ export const ProgressiveImage = ({
   onProgress,
   onZoomChange,
   onBlobSrcChange,
+  onVisualReadyChange,
+  disableThumbnailTransition = false,
   enableZoom = true,
   enablePan = true,
   maxZoom = 20,
@@ -169,6 +171,12 @@ export const ProgressiveImage = ({
     [enablePan],
   )
 
+  const isVisualReady = Boolean((thumbnailSrc && isThumbnailLoaded) || isHighResImageRendered)
+
+  useLayoutEffect(() => {
+    onVisualReadyChange?.(isVisualReady)
+  }, [isVisualReady, onVisualReadyChange])
+
   return (
     <div
       className={clsxm('relative overflow-hidden', className)}
@@ -186,7 +194,8 @@ export const ProgressiveImage = ({
           key={thumbnailSrc}
           alt={alt}
           className={clsxm(
-            'absolute inset-0 h-full w-full object-contain transition-opacity duration-300',
+            'absolute inset-0 h-full w-full object-contain',
+            !disableThumbnailTransition && 'transition-opacity duration-300',
             isThumbnailLoaded ? 'opacity-100' : 'opacity-0',
           )}
           onLoad={handleThumbnailLoad}

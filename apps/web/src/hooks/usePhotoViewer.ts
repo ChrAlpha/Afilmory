@@ -1,10 +1,11 @@
 import { photoLoader } from '@afilmory/data'
-import { useAtomValue } from 'jotai'
+import { useAtomValue, useSetAtom } from 'jotai'
 import { use, useCallback, useMemo } from 'react'
+import { flushSync } from 'react-dom'
 import { useLocation, useNavigate, useParams } from 'react-router'
 
 import { gallerySettingAtom } from '~/atoms/app'
-import { setViewer, viewerAtom } from '~/atoms/viewer'
+import { viewerAtom } from '~/atoms/viewer'
 import { jotaiStore } from '~/lib/jotai'
 import { trackView } from '~/lib/tracker'
 import { PhotosContext } from '~/providers/photos-provider'
@@ -120,12 +121,42 @@ export const useContextPhotos = () => {
   return photos
 }
 
+export const useOpenPhotoViewer = () => {
+  const photos = useContextPhotos()
+  const navigate = useNavigate()
+  const setViewerState = useSetAtom(viewerAtom)
+
+  return useCallback(
+    (index: number, element?: HTMLElement) => {
+      const photo = photos[index]
+      if (!photo) return
+
+      flushSync(() => {
+        setViewerState((prev) => ({
+          ...prev,
+          isOpen: true,
+          photoId: photo.id,
+          triggerElement: element || null,
+        }))
+      })
+
+      document.body.style.overflow = 'hidden'
+      window.requestAnimationFrame(() => {
+        navigate(`/photos/${photo.id}${window.location.search}`)
+      })
+      trackView(photo.id)
+    },
+    [navigate, photos, setViewerState],
+  )
+}
+
 export const usePhotoViewer = () => {
   const photos = usePhotos()
   const navigate = useNavigate()
   const location = useLocation()
   const { photoId: urlPhotoId } = useParams()
   const viewerState = useAtomValue(viewerAtom)
+  const setViewerState = useSetAtom(viewerAtom)
 
   // Derive isOpen from URL params - viewer is open if a photoId param is present
   const isOpen = !!urlPhotoId
@@ -142,26 +173,26 @@ export const usePhotoViewer = () => {
       const photo = photos[index]
       if (!photo) return
 
-      setViewer((prev) => ({
-        ...prev,
-        isOpen: true,
-        photoId: photo.id,
-        triggerElement: element || null,
-      }))
+      flushSync(() => {
+        setViewerState((prev) => ({
+          ...prev,
+          isOpen: true,
+          photoId: photo.id,
+          triggerElement: element || null,
+        }))
+      })
 
-      // Navigate to photo URL (creates history entry)
-      navigate(`/photos/${photo.id}${location.search}`)
-
-      // 防止背景滚动
       document.body.style.overflow = 'hidden'
-
+      window.requestAnimationFrame(() => {
+        navigate(`/photos/${photo.id}${location.search}`)
+      })
       trackView(photo.id)
     },
-    [photos, navigate, location.search],
+    [photos, navigate, location.search, setViewerState],
   )
 
   const closeViewer = useCallback(() => {
-    setViewer((prev) => ({
+    setViewerState((prev) => ({
       ...prev,
       isOpen: false,
       triggerElement: null,
@@ -178,7 +209,7 @@ export const usePhotoViewer = () => {
 
     // 恢复背景滚动
     document.body.style.overflow = ''
-  }, [navigate, location.search, location.pathname])
+  }, [navigate, location.search, location.pathname, setViewerState])
 
   const goToIndex = useCallback(
     (index: number) => {
@@ -190,7 +221,7 @@ export const usePhotoViewer = () => {
           return
         }
 
-        setViewer((prev) => ({
+        setViewerState((prev) => ({
           ...prev,
           photoId: photo.id,
         }))
@@ -201,7 +232,7 @@ export const usePhotoViewer = () => {
         trackView(photo.id)
       }
     },
-    [photos, navigate, location.search, urlPhotoId],
+    [photos, navigate, location.search, setViewerState, urlPhotoId],
   )
 
   return {

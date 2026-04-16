@@ -4,7 +4,7 @@ import { m } from 'motion/react'
 import { Fragment, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { useContextPhotos, usePhotoViewer } from '~/hooks/usePhotoViewer'
+import { useContextPhotos, useOpenPhotoViewer } from '~/hooks/usePhotoViewer'
 import {
   CarbonIsoOutline,
   MaterialSymbolsShutterSpeed,
@@ -18,7 +18,7 @@ import type { PhotoManifest } from '~/types/photo'
 
 export const MasonryPhotoItem = memo(({ data, width }: { data: PhotoManifest; width: number }) => {
   const photos = useContextPhotos()
-  const photoViewer = usePhotoViewer()
+  const openPhotoViewer = useOpenPhotoViewer()
   const { t } = useTranslation()
   const [imageLoaded, setImageLoaded] = useState(false)
   const [imageError, setImageError] = useState(false)
@@ -48,7 +48,7 @@ export const MasonryPhotoItem = memo(({ data, width }: { data: PhotoManifest; wi
       const triggerEl =
         imageRef.current?.parentElement instanceof HTMLElement ? imageRef.current.parentElement : imageRef.current
 
-      photoViewer.openViewer(photoIndex, triggerEl ?? undefined)
+      openPhotoViewer(photoIndex, triggerEl ?? undefined)
     }
   }
 

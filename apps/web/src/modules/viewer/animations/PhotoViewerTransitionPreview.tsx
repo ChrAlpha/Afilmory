@@ -19,8 +19,9 @@ export const PhotoViewerTransitionPreview = ({
     duration: 0.42,
     ease: [0.22, 1, 0.36, 1] as const,
   }
+  const entryHandoffLead = 0.1
   const entryFadeOutTransition = {
-    duration: 0.22,
+    duration: 0.1,
     ease: [0.32, 0.72, 0, 1] as const,
   }
   const thumbHash = typeof transition.thumbHash === 'string' ? transition.thumbHash : null
@@ -38,6 +39,7 @@ export const PhotoViewerTransitionPreview = ({
     opacity.set(1)
     hasReadyRef.current = false
     hasCompletedRef.current = false
+    let readyTimer: number | null = null
 
     const complete = () => {
       if (hasCompletedRef.current) return
@@ -74,11 +76,22 @@ export const PhotoViewerTransitionPreview = ({
       animate(rotate, transition.to.rotate, baseTransition),
     ]
 
+    if (transition.variant === 'entry') {
+      readyTimer = window.setTimeout(
+        ready,
+        Math.max(0, (baseTransition.duration - entryHandoffLead) * 1000),
+      )
+    }
+
     return () => {
+      if (readyTimer) {
+        window.clearTimeout(readyTimer)
+      }
       animations.forEach((animation) => animation.stop())
     }
   }, [
     borderRadius,
+    entryHandoffLead,
     height,
     onReady,
     onComplete,
