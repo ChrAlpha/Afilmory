@@ -12,6 +12,7 @@ export interface PhotoInspectorProps {
   exifData: PickedExif | null
   visible?: boolean
   onClose?: () => void
+  animated?: boolean
 }
 
 const CloudInspector: FC<PhotoInspectorProps> = (props) => <InspectorPanel {...props} />

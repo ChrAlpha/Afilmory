@@ -1,6 +1,5 @@
 import type { PickedExif } from '@afilmory/builder'
 import { MobileTabGroup, MobileTabItem, SegmentGroup, SegmentItem } from '@afilmory/ui'
-import { Spring } from '@afilmory/utils'
 import { useQuery } from '@tanstack/react-query'
 import clsx from 'clsx'
 import { m } from 'motion/react'
@@ -13,6 +12,7 @@ import { useMobile } from '~/hooks/useMobile'
 import { commentsApi } from '~/lib/api/comments'
 import { ExifPanelContent } from '~/modules/metadata/ExifPanel'
 import { CommentsPanel } from '~/modules/social/comments'
+import { getViewerUiSlideMotion, viewerUiOffsets } from '~/modules/viewer/animations/uiTransitions'
 import type { PhotoManifest } from '~/types/photo'
 
 type Tab = 'info' | 'comments'
@@ -22,7 +22,8 @@ export const InspectorPanel: FC<{
   exifData: PickedExif | null
   onClose?: () => void
   visible?: boolean
-}> = ({ currentPhoto, exifData, onClose, visible = true }) => {
+  animated?: boolean
+}> = ({ currentPhoto, exifData, onClose, visible = true, animated = true }) => {
   const { t } = useTranslation()
   const isMobile = useMobile()
   const [activeTab, setActiveTab] = useState<Tab>('info')
@@ -35,6 +36,13 @@ export const InspectorPanel: FC<{
   })
 
   const hasComments = (commentCount?.count ?? 0) > 0
+  const panelMotion = animated
+    ? getViewerUiSlideMotion({
+        axis: isMobile ? 'y' : 'x',
+        offset: isMobile ? viewerUiOffsets.inspectorMobileY : viewerUiOffsets.inspectorX,
+        visible,
+      })
+    : null
 
   return (
     <m.div
@@ -43,19 +51,7 @@ export const InspectorPanel: FC<{
           ? 'inspector-panel-mobile fixed right-0 bottom-0 left-0 z-10 h-[60vh] w-full rounded-t-lg backdrop-blur-2xl'
           : 'relative w-80 shrink-0 backdrop-blur-2xl'
       } border-accent/20 flex flex-col text-white`}
-      initial={{
-        opacity: 0,
-        ...(isMobile ? { y: 100 } : { x: 100 }),
-      }}
-      animate={{
-        opacity: visible ? 1 : 0,
-        ...(isMobile ? { y: visible ? 0 : 100 } : { x: visible ? 0 : 100 }),
-      }}
-      exit={{
-        opacity: 0,
-        ...(isMobile ? { y: 100 } : { x: 100 }),
-      }}
-      transition={Spring.presets.smooth}
+      {...(panelMotion ?? {})}
       style={{
         pointerEvents: visible ? 'auto' : 'none',
         backgroundImage:

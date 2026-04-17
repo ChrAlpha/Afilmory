@@ -1,5 +1,5 @@
 import { HoverCard, HoverCardContent, HoverCardTrigger, Thumbhash } from '@afilmory/ui'
-import { clsxm, Spring } from '@afilmory/utils'
+import { clsxm } from '@afilmory/utils'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { m } from 'motion/react'
 import type { FC } from 'react'
@@ -8,6 +8,8 @@ import { useEffect, useRef, useState } from 'react'
 import { useMobile } from '~/hooks/useMobile'
 import { nextFrame } from '~/lib/dom'
 import type { PhotoManifest } from '~/types/photo'
+
+import { getViewerUiSlideMotion, viewerUiOffsets } from './animations/uiTransitions'
 
 const thumbnailSize = {
   mobile: 48,
@@ -27,6 +29,11 @@ export const GalleryThumbnail: FC<{
   const [scrollContainerWidth, setScrollContainerWidth] = useState(0)
 
   const thumbnailHeight = isMobile ? thumbnailSize.mobile : thumbnailSize.desktop
+  const railMotion = getViewerUiSlideMotion({
+    axis: 'y',
+    offset: isMobile ? viewerUiOffsets.railMobileY : viewerUiOffsets.railDesktopY,
+    visible,
+  })
 
   // Use tanstack virtual for horizontal scrolling
   const virtualizer = useVirtualizer({
@@ -42,15 +49,22 @@ export const GalleryThumbnail: FC<{
 
   useEffect(() => {
     const scrollContainer = scrollContainerRef.current
-    if (scrollContainer) {
+    if (!scrollContainer) return
+
+    const updateWidth = () => {
       setScrollContainerWidth(scrollContainer.clientWidth)
-      const handleResize = () => {
-        setScrollContainerWidth(scrollContainer.clientWidth)
-      }
-      scrollContainer.addEventListener('resize', handleResize)
-      return () => {
-        scrollContainer.removeEventListener('resize', handleResize)
-      }
+    }
+
+    updateWidth()
+
+    const resizeObserver = new ResizeObserver(() => {
+      updateWidth()
+    })
+
+    resizeObserver.observe(scrollContainer)
+
+    return () => {
+      resizeObserver.disconnect()
     }
   }, [])
 
@@ -123,14 +137,9 @@ export const GalleryThumbnail: FC<{
 
   return (
     <m.div
+      data-viewer-region="thumbnail-rail"
       className="pb-safe bg-material-medium z-10 shrink-0 backdrop-blur-2xl"
-      initial={{ y: 100, opacity: 0 }}
-      animate={{
-        y: visible ? 0 : 48,
-        opacity: visible ? 1 : 0,
-      }}
-      exit={{ y: 100, opacity: 0 }}
-      transition={Spring.presets.smooth}
+      {...railMotion}
       style={{
         pointerEvents: visible ? 'auto' : 'none',
         boxShadow:
@@ -189,6 +198,8 @@ export const GalleryThumbnail: FC<{
                           src={photo.thumbnailUrl}
                           alt={photo.title}
                           className="absolute inset-0 h-full w-full object-cover"
+                          loading="lazy"
+                          decoding="async"
                         />
                       </button>
                     </HoverCardTrigger>
@@ -213,6 +224,8 @@ export const GalleryThumbnail: FC<{
                             src={photo.thumbnailUrl}
                             alt={photo.title}
                             className="absolute inset-0 h-full w-full object-cover"
+                            loading="lazy"
+                            decoding="async"
                           />
                         </div>
                         {/* Photo info overlay */}
@@ -250,6 +263,8 @@ export const GalleryThumbnail: FC<{
                       src={photo.thumbnailUrl}
                       alt={photo.title}
                       className="absolute inset-0 h-full w-full object-cover"
+                      loading="lazy"
+                      decoding="async"
                     />
                   </button>
                 )}

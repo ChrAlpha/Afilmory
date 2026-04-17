@@ -17,6 +17,7 @@ import type { PhotoManifest } from '~/types/photo'
 
 import { PhotoViewerTransitionPreview } from './animations/PhotoViewerTransitionPreview'
 import type { AnimationFrameRect } from './animations/types'
+import { viewerUiOffsets, viewerUiTransition } from './animations/uiTransitions'
 import { usePhotoViewerTransitions } from './animations/usePhotoViewerTransitions'
 import { computeViewerImageFrame, projectViewerImageFrame } from './animations/utils'
 import { GalleryThumbnail } from './GalleryThumbnail'
@@ -468,25 +469,55 @@ export const PhotoViewer = ({
               </div>
 
               {/* PhotoInspector - 根据设备与折叠状态展示 */}
-              <Suspense>
-                {isMobile ? (
+              {isMobile ? (
+                <Suspense>
                   <MobilePhotoInspectorSheet
                     currentPhoto={currentPhoto}
                     exifData={currentPhoto.exif}
                     progress={inspectorProgress}
                     onClose={closeInspector}
                   />
-                ) : (
-                  isInspectorVisible && (
-                    <PhotoInspector
-                      currentPhoto={currentPhoto}
-                      exifData={currentPhoto.exif}
-                      visible={isInspectorVisible && isDesktopInspectorAnimatedVisible}
-                      onClose={handleCloseDesktopInspector}
-                    />
-                  )
-                )}
-              </Suspense>
+                </Suspense>
+              ) : (
+                (isInspectorVisible || isDesktopInspectorAnimatedVisible) && (
+                  <m.div
+                    data-viewer-region="inspector"
+                    className="z-10 shrink-0 overflow-hidden"
+                    initial={{
+                      width: isInspectorVisible ? 320 : 0,
+                      opacity: 0,
+                      x: viewerUiOffsets.inspectorX,
+                    }}
+                    animate={{
+                      width: isInspectorVisible ? 320 : 0,
+                      opacity: isInspectorVisible && isDesktopInspectorAnimatedVisible ? 1 : 0,
+                      x: isInspectorVisible && isDesktopInspectorAnimatedVisible ? 0 : viewerUiOffsets.inspectorX,
+                    }}
+                    exit={{
+                      width: isInspectorVisible ? 320 : 0,
+                      opacity: 0,
+                      x: viewerUiOffsets.inspectorX,
+                    }}
+                    transition={viewerUiTransition}
+                    style={{
+                      pointerEvents: isInspectorVisible && isDesktopInspectorAnimatedVisible ? 'auto' : 'none',
+                    }}
+                  >
+                    {isInspectorVisible && (
+                      <Suspense>
+                        <div className="w-80">
+                          <PhotoInspector
+                            currentPhoto={currentPhoto}
+                            exifData={currentPhoto.exif}
+                            onClose={handleCloseDesktopInspector}
+                            animated={false}
+                          />
+                        </div>
+                      </Suspense>
+                    )}
+                  </m.div>
+                )
+              )}
             </div>
           </m.div>
         )}
