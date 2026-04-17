@@ -1,7 +1,6 @@
 import { photoLoader } from '@afilmory/data'
 import { useAtomValue, useSetAtom } from 'jotai'
 import { use, useCallback, useMemo } from 'react'
-import { flushSync } from 'react-dom'
 import { useLocation, useNavigate, useParams } from 'react-router'
 
 import { gallerySettingAtom } from '~/atoms/app'
@@ -131,19 +130,14 @@ export const useOpenPhotoViewer = () => {
       const photo = photos[index]
       if (!photo) return
 
-      flushSync(() => {
-        setViewerState((prev) => ({
-          ...prev,
-          isOpen: true,
-          photoId: photo.id,
-          triggerElement: element || null,
-        }))
-      })
+      setViewerState((prev) => ({
+        ...prev,
+        photoId: photo.id,
+        triggerElement: element || null,
+      }))
 
       document.body.style.overflow = 'hidden'
-      window.requestAnimationFrame(() => {
-        navigate(`/photos/${photo.id}${window.location.search}`)
-      })
+      navigate(`/photos/${photo.id}${window.location.search}`)
       trackView(photo.id)
     },
     [navigate, photos, setViewerState],
@@ -173,19 +167,14 @@ export const usePhotoViewer = () => {
       const photo = photos[index]
       if (!photo) return
 
-      flushSync(() => {
-        setViewerState((prev) => ({
-          ...prev,
-          isOpen: true,
-          photoId: photo.id,
-          triggerElement: element || null,
-        }))
-      })
+      setViewerState((prev) => ({
+        ...prev,
+        photoId: photo.id,
+        triggerElement: element || null,
+      }))
 
       document.body.style.overflow = 'hidden'
-      window.requestAnimationFrame(() => {
-        navigate(`/photos/${photo.id}${location.search}`)
-      })
+      navigate(`/photos/${photo.id}${location.search}`)
       trackView(photo.id)
     },
     [photos, navigate, location.search, setViewerState],

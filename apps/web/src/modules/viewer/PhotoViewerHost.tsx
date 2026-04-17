@@ -30,40 +30,51 @@ export const PhotoViewerHost = () => {
   const closeViewerRef = useRef(photoViewer.closeViewer)
   closeViewerRef.current = photoViewer.closeViewer
 
-  const isCloseActiveRef = useRef(false)
-
   const currentPhoto = photos[photoViewer.currentIndex]
-  const isViewerMounted = viewerState.isOpen || photoViewer.isOpen || isClosing
-  const isOpen = (viewerState.isOpen || photoViewer.isOpen) && !isClosing
+  const isOpen = viewerState.isOpen || photoViewer.isOpen
+  const isViewerMounted = isOpen || isClosing
 
   useTitle(isViewerMounted ? currentPhoto?.title || 'Not Found' : null)
 
   useEffect(() => {
-    if (isClosing) {
-      isCloseActiveRef.current = false
+    if (isClosing && viewerState.isOpen) {
       setIsClosing(false)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [photoViewer.currentIndex])
+  }, [isClosing, viewerState.isOpen])
+
+  useEffect(() => {
+    if (!ref) return
+
+    if (isOpen) {
+      ref.removeAttribute('inert')
+      ref.removeAttribute('aria-hidden')
+      return
+    }
+
+    ref.setAttribute('inert', '')
+    ref.setAttribute('aria-hidden', 'true')
+
+    return () => {
+      ref.removeAttribute('inert')
+      ref.removeAttribute('aria-hidden')
+    }
+  }, [isOpen, ref])
 
   const handleClose = useCallback(() => {
-    isCloseActiveRef.current = true
     setIsClosing(true)
+    closeViewerRef.current()
   }, [])
 
   const handleExitComplete = useCallback(() => {
-    if (isCloseActiveRef.current) {
-      isCloseActiveRef.current = false
-      closeViewerRef.current()
-    } else {
-      setIsClosing(false)
-    }
+    setIsClosing(false)
   }, [])
 
   useEffect(() => {
     if (!currentPhoto) return
 
     let isCancelled = false
+    let cleanupTimer: number | null = null
+    let transitionStyle: HTMLStyleElement | null = null
 
     ;(async () => {
       try {
@@ -80,8 +91,9 @@ export const PhotoViewerHost = () => {
             }
           `
           document.head.append($css)
+          transitionStyle = $css
 
-          setTimeout(() => {
+          cleanupTimer = window.setTimeout(() => {
             $css.remove()
           }, 100)
 
@@ -94,6 +106,10 @@ export const PhotoViewerHost = () => {
 
     return () => {
       isCancelled = true
+      if (cleanupTimer !== null) {
+        window.clearTimeout(cleanupTimer)
+      }
+      transitionStyle?.remove()
     }
   }, [currentPhoto])
 

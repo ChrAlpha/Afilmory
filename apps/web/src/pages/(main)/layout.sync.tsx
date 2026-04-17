@@ -197,18 +197,13 @@ const useSyncViewerWithUrl = () => {
   const { photoId } = useParams()
   const photos = usePhotos()
 
-  // Track last processed location to avoid redundant updates
-  const lastProcessedPathRef = useRef<string>('')
-
   useEffect(() => {
     const currentPath = location.pathname
 
-    // Skip if we already processed this path
-    if (currentPath === lastProcessedPathRef.current) {
+    // Ignore stale effects when the browser URL has already advanced to a newer route.
+    if (typeof window !== 'undefined' && currentPath !== window.location.pathname) {
       return
     }
-
-    lastProcessedPathRef.current = currentPath
 
     const isPhotoRoute = currentPath.startsWith('/photos/')
     const currentViewer = getViewer()
@@ -217,19 +212,21 @@ const useSyncViewerWithUrl = () => {
       // URL says viewer should be open
       const targetIndex = photos.findIndex((p) => p.id === photoId)
 
-      if (targetIndex !== -1 && // Open viewer if closed, or update photo if different
-        (!currentViewer.isOpen || currentViewer.photoId !== photoId)) {
-          setViewer((prev) => ({
-            ...prev,
-            isOpen: true,
-            photoId,
-            // When syncing from URL, do not preserve a potentially stale triggerElement
-            triggerElement: null,
-          }))
+      if (
+        targetIndex !== -1 && // Open viewer if closed, or update photo if different
+        (!currentViewer.isOpen || currentViewer.photoId !== photoId)
+      ) {
+        setViewer((prev) => ({
+          ...prev,
+          isOpen: true,
+          photoId,
+          // When syncing from URL, do not preserve a potentially stale triggerElement
+          triggerElement: null,
+        }))
 
-          // Prevent background scroll
-          document.body.style.overflow = 'hidden'
-        }
+        // Prevent background scroll
+        document.body.style.overflow = 'hidden'
+      }
     } else {
       // URL says viewer should be closed
       if (currentViewer.isOpen) {
@@ -243,11 +240,11 @@ const useSyncViewerWithUrl = () => {
         document.body.style.overflow = ''
       }
     }
+  }, [location.pathname, photoId, photos])
 
+  useEffect(() => {
     return () => {
-      // Clean up body scroll lock if component unmounts while viewer was open
-      // This is a safety measure, normally closeViewer handles this
       document.body.style.overflow = ''
     }
-  }, [location.pathname, photoId, photos])
+  }, [])
 }

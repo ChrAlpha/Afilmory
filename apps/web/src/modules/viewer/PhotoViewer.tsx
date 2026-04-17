@@ -6,27 +6,23 @@ import 'swiper/css/navigation'
 import { Thumbhash } from '@afilmory/ui'
 import { Spring } from '@afilmory/utils'
 import { AnimatePresence, m } from 'motion/react'
-import { Fragment, Suspense, useCallback, useEffect, useRef, useState } from 'react'
-import { useTranslation } from 'react-i18next'
+import { Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import type { Swiper as SwiperType } from 'swiper'
-import { Navigation, Virtual } from 'swiper/modules'
-import { Swiper, SwiperSlide } from 'swiper/react'
 
 import { useMobile } from '~/hooks/useMobile'
 import type { LoadingIndicatorRef } from '~/modules/inspector/LoadingIndicator'
 import { LoadingIndicator } from '~/modules/inspector/LoadingIndicator'
 import { PhotoInspector } from '~/modules/inspector/PhotoInspector'
-import { ShareModal } from '~/modules/social/ShareModal'
 import type { PhotoManifest } from '~/types/photo'
 
-import { ReactionRail } from '../social'
 import { PhotoViewerTransitionPreview } from './animations/PhotoViewerTransitionPreview'
 import type { AnimationFrameRect } from './animations/types'
 import { usePhotoViewerTransitions } from './animations/usePhotoViewerTransitions'
 import { computeViewerImageFrame, projectViewerImageFrame } from './animations/utils'
 import { GalleryThumbnail } from './GalleryThumbnail'
 import { MobilePhotoInspectorSheet } from './MobilePhotoInspectorSheet'
-import { ProgressiveImage } from './ProgressiveImage'
+import { PhotoViewerChrome } from './PhotoViewerChrome'
+import { PhotoViewerSlides } from './PhotoViewerSlides'
 import type { MobilePhotoViewerDismissSnapshot } from './usePhotoViewerMobileInteractions'
 import { usePhotoViewerMobileInteractions } from './usePhotoViewerMobileInteractions'
 
@@ -51,7 +47,6 @@ export const PhotoViewer = ({
   triggerElement,
   onExitComplete,
 }: PhotoViewerProps) => {
-  const { t } = useTranslation()
   const isMobile = useMobile()
   const swiperRef = useRef<SwiperType | null>(null)
   const [isImageZoomed, setIsImageZoomed] = useState(false)
@@ -134,7 +129,6 @@ export const PhotoViewer = ({
   })
   const isInspectorVisible = isMobile ? isMobileInspectorVisible : isDesktopInspectorVisible
   const isMobileChromeInteractive = !isMobile || !isMobileInspectorVisible
-  const mobileChromeButtonClassName = isMobileChromeInteractive ? 'pointer-events-auto' : 'pointer-events-none'
   const isViewerChromeVisible = isMobile ? isViewerContentVisible : isOpen
   const isThumbnailRailVisible = isMobile ? isViewerContentVisible : isOpen
   const isDesktopInspectorAnimatedVisible = isMobile ? isViewerContentVisible : isOpen
@@ -219,6 +213,14 @@ export const PhotoViewer = ({
     setIsImageZoomed(isZoomed)
   }, [])
 
+  const handleOpenDesktopInspector = useCallback(() => {
+    setIsDesktopInspectorVisible(true)
+  }, [])
+
+  const handleCloseDesktopInspector = useCallback(() => {
+    setIsDesktopInspectorVisible(false)
+  }, [])
+
   // 处理 blobSrc 变化
   const handleBlobSrcChange = useCallback((blobSrc: string | null) => {
     setCurrentBlobSrc(blobSrc)
@@ -278,7 +280,7 @@ export const PhotoViewer = ({
             animate={{ opacity: isOpen ? 1 : 0 }}
             exit={{ opacity: 0 }}
             transition={Spring.presets.snappy}
-            className="fixed inset-0"
+            className="pointer-events-none fixed inset-0"
           >
             <m.div
               className="bg-material-opaque absolute inset-0"
@@ -297,7 +299,7 @@ export const PhotoViewer = ({
             animate={{ opacity: isOpen ? 1 : 0 }}
             exit={{ opacity: 0 }}
             transition={Spring.presets.snappy}
-            className="fixed inset-0"
+            className="pointer-events-none fixed inset-0"
           >
             {currentThumbHash && <Thumbhash thumbHash={currentThumbHash} className="size-fill scale-110" />}
           </m.div>
@@ -315,7 +317,7 @@ export const PhotoViewer = ({
             }}
             initial={false}
             animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            exit={{ opacity: 0, pointerEvents: 'none' }}
             transition={Spring.presets.snappy}
           >
             <div className={`flex size-full ${isMobile ? 'flex-col' : 'flex-row'}`}>
@@ -342,70 +344,19 @@ export const PhotoViewer = ({
                     animate={{ opacity: 1 }}
                   >
                     {/* 顶部工具栏 */}
-                    <m.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: isViewerChromeVisible ? 1 : 0 }}
-                      exit={{ opacity: 0 }}
-                      transition={Spring.presets.snappy}
-                      className={`pointer-events-none absolute ${isMobile ? 'top-2 right-2 left-2' : 'top-4 right-4 left-4'} z-30 flex items-center justify-between`}
-                      style={isMobile ? { opacity: chromeOpacity, y: chromeY } : undefined}
-                    >
-                      {/* 左侧工具按钮 */}
-                      <div className="flex items-center gap-2">
-                        {/* 信息按钮 - 在移动设备上显示 */}
-                        {isMobile && (
-                          <button
-                            type="button"
-                            disabled={!isMobileChromeInteractive}
-                            className={`bg-material-ultra-thick ${mobileChromeButtonClassName} flex size-8 items-center justify-center rounded-full text-white backdrop-blur-2xl duration-200 hover:bg-black/40 disabled:cursor-default ${isInspectorVisible ? 'bg-accent' : ''}`}
-                            onClick={toggleInspector}
-                          >
-                            <i className="i-mingcute-information-line" />
-                          </button>
-                        )}
-                      </div>
-
-                      {/* 右侧按钮组 */}
-                      <div className="flex items-center gap-2">
-                        {/* 分享按钮 */}
-                        <ShareModal
-                          photo={currentPhoto}
-                          blobSrc={currentBlobSrc || undefined}
-                          trigger={
-                            <button
-                              type="button"
-                              disabled={!isMobileChromeInteractive}
-                              className={`bg-material-ultra-thick ${mobileChromeButtonClassName} flex size-8 items-center justify-center rounded-full text-white backdrop-blur-2xl duration-200 hover:bg-black/40 disabled:cursor-default`}
-                              title={t('photo.share.title')}
-                            >
-                              <i className="i-mingcute-share-2-line" />
-                            </button>
-                          }
-                        />
-
-                        {/* 展开信息面板（桌面端在折叠时显示） */}
-                        {!isMobile && !isInspectorVisible && (
-                          <button
-                            type="button"
-                            className="bg-material-ultra-thick pointer-events-auto flex size-8 items-center justify-center rounded-full text-white backdrop-blur-2xl duration-200 hover:bg-black/40"
-                            onClick={() => setIsDesktopInspectorVisible(true)}
-                            title={t('inspector.tab.info')}
-                          >
-                            <i className="i-lucide-panel-right-open" />
-                          </button>
-                        )}
-
-                        {/* 关闭按钮 */}
-                        <button
-                          type="button"
-                          disabled={!isMobileChromeInteractive}
-                          className={`bg-material-ultra-thick ${mobileChromeButtonClassName} flex size-8 items-center justify-center rounded-full text-white backdrop-blur-2xl duration-200 hover:bg-black/40 disabled:cursor-default`}
-                          onClick={handleCloseRequest}
-                        >
-                          <i className="i-mingcute-close-line" />
-                        </button>
-                      </div>
-                    </m.div>
+                    <PhotoViewerChrome
+                      currentBlobSrc={currentBlobSrc}
+                      currentPhoto={currentPhoto}
+                      isInspectorVisible={isInspectorVisible}
+                      isMobile={isMobile}
+                      isMobileChromeInteractive={isMobileChromeInteractive}
+                      isViewerChromeVisible={isViewerChromeVisible}
+                      chromeOpacity={chromeOpacity}
+                      chromeY={chromeY}
+                      onClose={handleCloseRequest}
+                      onOpenDesktopInspector={handleOpenDesktopInspector}
+                      onToggleInspector={toggleInspector}
+                    />
 
                     {/* 加载指示器 */}
                     <LoadingIndicator ref={loadingIndicatorRef} />
@@ -422,7 +373,10 @@ export const PhotoViewer = ({
                         >
                           <div className="relative h-full w-full">
                             {currentThumbHash && (
-                              <Thumbhash thumbHash={currentThumbHash} className="pointer-events-none absolute inset-0" />
+                              <Thumbhash
+                                thumbHash={currentThumbHash}
+                                className="pointer-events-none absolute inset-0"
+                              />
                             )}
                             <img
                               src={currentPhoto.thumbnailUrl || currentPhoto.originalUrl}
@@ -435,89 +389,24 @@ export const PhotoViewer = ({
                       )}
 
                       {shouldMountImageStage ? (
-                        <Swiper
-                          modules={[Navigation, Virtual]}
-                          spaceBetween={0}
-                          slidesPerView={1}
-                          initialSlide={currentIndex}
-                          virtual
-                          onSwiper={(swiper) => {
-                            swiperRef.current = swiper
-                            swiper.allowTouchMove =
-                              !isImageZoomed && !(isMobile && (isVerticalGestureActive || isInspectorVisible))
-                          }}
-                          onSlideChange={(swiper) => {
-                            onIndexChange(swiper.activeIndex)
-                          }}
-                          className="h-full w-full"
-                          style={{ touchAction: isMobile ? 'pan-x' : 'pan-y' }}
-                        >
-                          {photos.map((photo, index) => {
-                            const isCurrentImage = index === currentIndex
-                            const hideCurrentImage = isCurrentImage && isEntryAnimating && !isViewerContentVisible
-                            const shouldSuppressEntryCurrentImageAnimation =
-                              isCurrentImage && entryTransition?.variant === 'entry'
-                            return (
-                              <SwiperSlide
-                                key={photo.id}
-                                className="flex items-center justify-center"
-                                virtualIndex={index}
-                              >
-                                <ReactionRail photoId={photo.id} />
-                                <m.div
-                                  initial={
-                                    shouldSuppressEntryCurrentImageAnimation ? false : { opacity: 0.5, scale: 0.95 }
-                                  }
-                                  animate={shouldSuppressEntryCurrentImageAnimation ? undefined : { opacity: 1, scale: 1 }}
-                                  exit={{ opacity: 0, scale: 0.95 }}
-                                  transition={shouldSuppressEntryCurrentImageAnimation ? undefined : Spring.presets.smooth}
-                                  className="relative flex h-full w-full items-center justify-center"
-                                  style={{
-                                    visibility: hideCurrentImage ? 'hidden' : 'visible',
-                                  }}
-                                >
-                                  <ProgressiveImage
-                                    loadingIndicatorRef={loadingIndicatorRef}
-                                    isCurrentImage={isCurrentImage}
-                                    src={photo.originalUrl}
-                                    thumbnailSrc={photo.thumbnailUrl}
-                                    alt={photo.title}
-                                    width={isCurrentImage ? currentPhoto.width : undefined}
-                                    height={isCurrentImage ? currentPhoto.height : undefined}
-                                    className="h-full w-full object-contain"
-                                    enablePan={isCurrentImage ? !isMobile || isImageZoomed : true}
-                                  enableZoom={true}
-                                    shouldRenderHighRes={isViewerContentVisible && isOpen}
-                                    onZoomChange={isCurrentImage ? handleZoomChange : undefined}
-                                    onBlobSrcChange={isCurrentImage ? handleBlobSrcChange : undefined}
-                                    onVisualReadyChange={isCurrentImage ? setIsCurrentImageVisualReady : undefined}
-                                    disableThumbnailTransition={shouldSuppressEntryCurrentImageAnimation}
-                                    // Video source (Live Photo or Motion Photo)
-                                    videoSource={
-                                      photo.video?.type === 'motion-photo'
-                                        ? {
-                                            type: 'motion-photo',
-                                            imageUrl: photo.originalUrl,
-                                            offset: photo.video.offset,
-                                            size: photo.video.size,
-                                            presentationTimestamp: photo.video.presentationTimestamp,
-                                          }
-                                        : photo.video?.type === 'live-photo'
-                                          ? {
-                                              type: 'live-photo',
-                                              videoUrl: photo.video.videoUrl,
-                                            }
-                                          : { type: 'none' }
-                                    }
-                                    shouldAutoPlayVideoOnce={isCurrentImage}
-                                    // HDR props
-                                    isHDR={photo.isHDR}
-                                  />
-                                </m.div>
-                              </SwiperSlide>
-                            )
-                          })}
-                        </Swiper>
+                        <PhotoViewerSlides
+                          photos={photos}
+                          currentIndex={currentIndex}
+                          isEntryAnimating={isEntryAnimating}
+                          isEntryTransitionActive={entryTransition?.variant === 'entry'}
+                          isImageZoomed={isImageZoomed}
+                          isInspectorVisible={isInspectorVisible}
+                          isMobile={isMobile}
+                          isOpen={isOpen}
+                          isVerticalGestureActive={isVerticalGestureActive}
+                          isViewerContentVisible={isViewerContentVisible}
+                          loadingIndicatorRef={loadingIndicatorRef}
+                          onBlobSrcChange={handleBlobSrcChange}
+                          onIndexChange={onIndexChange}
+                          onVisualReadyChange={setIsCurrentImageVisualReady}
+                          onZoomChange={handleZoomChange}
+                          swiperRef={swiperRef}
+                        />
                       ) : (
                         <div className="h-full w-full" />
                       )}
@@ -537,7 +426,7 @@ export const PhotoViewer = ({
 
                       {/* 自定义导航按钮 */}
                       {!isMobile && (
-                        <Fragment>
+                        <>
                           {currentIndex > 0 && (
                             <button
                               type="button"
@@ -557,7 +446,7 @@ export const PhotoViewer = ({
                               <i className={`i-mingcute-right-line text-xl`} />
                             </button>
                           )}
-                        </Fragment>
+                        </>
                       )}
                     </div>
                   </m.div>
@@ -593,7 +482,7 @@ export const PhotoViewer = ({
                       currentPhoto={currentPhoto}
                       exifData={currentPhoto.exif}
                       visible={isInspectorVisible && isDesktopInspectorAnimatedVisible}
-                      onClose={() => setIsDesktopInspectorVisible(false)}
+                      onClose={handleCloseDesktopInspector}
                     />
                   )
                 )}
