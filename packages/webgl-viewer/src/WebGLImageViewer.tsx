@@ -51,9 +51,10 @@ export const WebGLImageViewer = ({
   }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const viewerRef = useRef<WebGLImageViewerEngine | null>(null)
+  const configRef = useRef<Required<WebGLImageViewerProps> | null>(null)
   const [tileOutlineEnabled, setTileOutlineEnabled] = useState(false)
 
-  const setDebugInfo = useRef((() => {}) as (debugInfo: any) => void)
+  const setDebugInfoRef = useRef((() => {}) as (debugInfo: any) => void)
 
   const config: Required<WebGLImageViewerProps> = useMemo(
     () => ({
@@ -107,6 +108,7 @@ export const WebGLImageViewer = ({
       debug,
     ],
   )
+  configRef.current = config
 
   useImperativeHandle(ref, () => ({
     zoomIn: (animated?: boolean) => viewerRef.current?.zoomIn(animated),
@@ -118,16 +120,17 @@ export const WebGLImageViewer = ({
   useEffect(() => {
     if (!canvasRef.current) return
 
+    const initialConfig = configRef.current!
     const webGLImageViewerEngine = new WebGLImageViewerEngine(
       canvasRef.current,
-      config,
-      debug ? setDebugInfo : undefined,
+      initialConfig,
+      debug ? setDebugInfoRef : undefined,
     )
 
     try {
       // 如果提供了尺寸，传递给loadImage进行优化
-      const preknownWidth = config.width > 0 ? config.width : undefined
-      const preknownHeight = config.height > 0 ? config.height : undefined
+      const preknownWidth = initialConfig.width > 0 ? initialConfig.width : undefined
+      const preknownHeight = initialConfig.height > 0 ? initialConfig.height : undefined
       webGLImageViewerEngine.loadImage(src, preknownWidth, preknownHeight).catch(console.error)
       viewerRef.current = webGLImageViewerEngine
       setTileOutlineEnabled(webGLImageViewerEngine.isTileOutlineEnabled())
@@ -139,7 +142,11 @@ export const WebGLImageViewer = ({
       webGLImageViewerEngine?.destroy()
       viewerRef.current = null
     }
-  }, [src, config, debug])
+  }, [src, debug])
+
+  useEffect(() => {
+    viewerRef.current?.updateConfig(config, debug ? setDebugInfoRef : undefined)
+  }, [config, debug])
 
   const handleOutlineToggle = useCallback(
     (enabled: boolean) => {
@@ -181,7 +188,7 @@ export const WebGLImageViewer = ({
           onToggleOutline={handleOutlineToggle}
           ref={(e) => {
             if (e) {
-              setDebugInfo.current = e.updateDebugInfo
+              setDebugInfoRef.current = e.updateDebugInfo
             }
           }}
         />

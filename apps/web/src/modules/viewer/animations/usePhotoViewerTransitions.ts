@@ -71,6 +71,19 @@ export const usePhotoViewerTransitions = ({
     element.style.visibility = 'hidden'
   }, [])
 
+  const resetExitState = useCallback(
+    (notifyExitComplete: boolean) => {
+      wasOpenRef.current = false
+      restoreTriggerElementVisibility()
+      setExitTransition(null)
+
+      if (notifyExitComplete) {
+        onExitComplete?.()
+      }
+    },
+    [onExitComplete, restoreTriggerElementVisibility],
+  )
+
   const resolveTriggerElement = useCallback((): HTMLElement | null => {
     if (!currentPhoto) return null
 
@@ -213,27 +226,20 @@ export const usePhotoViewerTransitions = ({
     }
 
     if (!wasOpenRef.current || !currentPhoto) {
-      wasOpenRef.current = false
-      restoreTriggerElementVisibility()
+      resetExitState(false)
       return
     }
 
     const triggerEl = resolveTriggerElement()
 
     if (!triggerEl || !triggerEl.isConnected) {
-      wasOpenRef.current = false
-      restoreTriggerElementVisibility()
-      setExitTransition(null)
-      onExitComplete?.()
+      resetExitState(true)
       return
     }
 
     const targetRect = triggerEl.getBoundingClientRect()
     if (!targetRect.width || !targetRect.height) {
-      wasOpenRef.current = false
-      restoreTriggerElementVisibility()
-      setExitTransition(null)
-      onExitComplete?.()
+      resetExitState(true)
       return
     }
 
@@ -242,10 +248,7 @@ export const usePhotoViewerTransitions = ({
     const viewerFrame = exitOverrideFrame ?? viewerImageFrameRef.current ?? computedFrame
 
     if (!viewerFrame.width || !viewerFrame.height) {
-      wasOpenRef.current = false
-      restoreTriggerElementVisibility()
-      setExitTransition(null)
-      onExitComplete?.()
+      resetExitState(true)
       return
     }
 
@@ -258,10 +261,7 @@ export const usePhotoViewerTransitions = ({
     const imageSrc = currentPhoto.thumbnailUrl || currentBlobSrc || currentPhoto.originalUrl || null
 
     if (!imageSrc) {
-      wasOpenRef.current = false
-      restoreTriggerElementVisibility()
-      setExitTransition(null)
-      onExitComplete?.()
+      resetExitState(true)
       return
     }
 
@@ -302,7 +302,7 @@ export const usePhotoViewerTransitions = ({
     resolveTriggerElement,
     restoreTriggerElementVisibility,
     hideTriggerElement,
-    onExitComplete,
+    resetExitState,
   ])
 
   useLayoutEffect(() => {
@@ -331,10 +331,8 @@ export const usePhotoViewerTransitions = ({
   }, [])
 
   const handleExitAnimationComplete = useCallback(() => {
-    restoreTriggerElementVisibility()
-    setExitTransition(null)
-    onExitComplete?.()
-  }, [restoreTriggerElementVisibility, onExitComplete])
+    resetExitState(true)
+  }, [resetExitState])
 
   const isEntryAnimating = Boolean(entryTransition)
   const shouldRenderBackdrop = isOpen || Boolean(exitTransition) || Boolean(entryTransition)

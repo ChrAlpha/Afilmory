@@ -1017,6 +1017,25 @@ export class WebGLImageViewerEngine extends ImageViewerEngineBase {
     return this.tileOutlineEnabled
   }
 
+  public updateConfig(
+    config: Required<WebGLImageViewerProps>,
+    onDebugUpdate?: React.RefObject<(debugInfo: DebugInfo) => void>,
+  ) {
+    this.config = config
+    this.onZoomChange = config.onZoomChange
+    this.onImageCopied = config.onImageCopied
+    this.onLoadingStateChange = config.onLoadingStateChange
+    this.onDebugUpdate = onDebugUpdate
+
+    if (!this.imageLoaded) {
+      return
+    }
+
+    this.constrainScaleAndPosition()
+    this.render()
+    this.notifyZoomChange()
+  }
+
   public destroy() {
     // 清理事件监听器
     window.removeEventListener('resize', this.boundResizeCanvas)

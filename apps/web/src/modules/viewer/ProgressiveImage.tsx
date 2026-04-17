@@ -145,6 +145,9 @@ export const ProgressiveImage = ({
   const isHDRSupported = useMediaQuery('(dynamic-range: high)')
   // Only use HDR if the browser supports it and the image is HDR
   const shouldUseHDR = isHDR && isHDRSupported
+  const shouldUseDOMViewer = hasVideo || shouldUseHDR
+  const shouldRenderThumbnail = Boolean(thumbnailSrc && (!isHighResImageRendered || error))
+  const shouldRenderHighResMedia = Boolean(highResLoaded && blobSrc && isActiveImage && !error)
 
   const webglPinchConfig = useMemo(
     () => ({
@@ -177,17 +180,20 @@ export const ProgressiveImage = ({
     onVisualReadyChange?.(isVisualReady)
   }, [isVisualReady, onVisualReadyChange])
 
+  const mediaInteractionHandlers = hasVideo
+    ? {
+        onMouseDown: handleLongPressStart,
+        onMouseUp: handleLongPressEnd,
+        onMouseLeave: handleLongPressEnd,
+        onTouchStart: handleLongPressStart,
+        onTouchEnd: handleLongPressEnd,
+      }
+    : undefined
+
   return (
-    <div
-      className={clsxm('relative overflow-hidden', className)}
-      onMouseDown={handleLongPressStart}
-      onMouseUp={handleLongPressEnd}
-      onMouseLeave={handleLongPressEnd}
-      onTouchStart={handleLongPressStart}
-      onTouchEnd={handleLongPressEnd}
-    >
+    <div className={clsxm('relative overflow-hidden', className)} {...mediaInteractionHandlers}>
       {/* 缩略图 - 在高分辨率图片未加载或加载失败时显示 */}
-      {thumbnailSrc && (!isHighResImageRendered || error) && (
+      {shouldRenderThumbnail && (
         <img
           ref={thumbnailRef}
           src={thumbnailSrc}
@@ -199,11 +205,12 @@ export const ProgressiveImage = ({
             isThumbnailLoaded ? 'opacity-100' : 'opacity-0',
           )}
           onLoad={handleThumbnailLoad}
+          decoding="async"
         />
       )}
 
       {/* 高分辨率图片 - 只在成功加载且非错误状态时显示 */}
-      {highResLoaded && blobSrc && isActiveImage && !error && (
+      {shouldRenderHighResMedia && blobSrc && (
         <div
           className="absolute inset-0 h-full w-full"
           onContextMenu={(e) => {
@@ -212,7 +219,7 @@ export const ProgressiveImage = ({
           }}
         >
           {/* LivePhoto/Motion Photo 或 HDR 模式使用 DOMImageViewer */}
-          {hasVideo || shouldUseHDR ? (
+          {shouldUseDOMViewer ? (
             <DOMImageViewer
               ref={domImageViewerRef}
               onZoomChange={onDOMTransformed}
@@ -263,7 +270,7 @@ export const ProgressiveImage = ({
         </div>
       )}
 
-      {hasVideo && highResLoaded && blobSrc && isActiveImage && !error && (
+      {hasVideo && shouldRenderHighResMedia && (
         <LivePhotoBadge
           livePhotoRef={livePhotoRef}
           isLivePhotoPlaying={isLivePhotoPlaying}
@@ -271,10 +278,10 @@ export const ProgressiveImage = ({
         />
       )}
 
-      {shouldUseHDR && highResLoaded && blobSrc && isActiveImage && !error && <HDRBadge />}
+      {shouldUseHDR && shouldRenderHighResMedia && <HDRBadge />}
 
       {/* 备用图片（当 WebGL 不可用时） - 只在非错误状态时显示 */}
-      {!canUseWebGL && highResLoaded && blobSrc && isActiveImage && !error && (
+      {!canUseWebGL && shouldRenderHighResMedia && (
         <div className="pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 bg-black/20">
           <i className="i-mingcute-warning-line mb-2 text-4xl" />
           <span className="text-center text-sm text-white">{t('photo.webgl.unavailable')}</span>
