@@ -5,6 +5,7 @@ export interface AnimationFrameRect {
   height: number
   borderRadius: number
   rotate: number
+  transformOrigin?: string
 }
 
 export type PhotoViewerTransitionVariant = 'entry' | 'exit'

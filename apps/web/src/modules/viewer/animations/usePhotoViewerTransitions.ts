@@ -167,6 +167,7 @@ export const usePhotoViewerTransitions = ({
       height: targetFrame.height,
       borderRadius: targetFrame.borderRadius,
       rotate: targetFrame.rotate,
+      transformOrigin: targetFrame.transformOrigin,
     }
 
     const frameForAnimation = viewerImageFrameRef.current ?? targetFrame
@@ -182,6 +183,7 @@ export const usePhotoViewerTransitions = ({
         height: fromRect.height,
         borderRadius: triggerBorderRadius,
         rotate: 0,
+        transformOrigin: '50% 50%',
       },
       to: {
         left: frameForAnimation.left,
@@ -190,6 +192,7 @@ export const usePhotoViewerTransitions = ({
         height: frameForAnimation.height,
         borderRadius: frameForAnimation.borderRadius,
         rotate: frameForAnimation.rotate,
+        transformOrigin: frameForAnimation.transformOrigin,
       },
     }
 
@@ -279,6 +282,7 @@ export const usePhotoViewerTransitions = ({
         height: viewerFrame.height,
         borderRadius: viewerFrame.borderRadius,
         rotate: viewerFrame.rotate,
+        transformOrigin: viewerFrame.transformOrigin,
       },
       to: {
         left: targetRect.left,
@@ -287,6 +291,7 @@ export const usePhotoViewerTransitions = ({
         height: targetRect.height,
         borderRadius,
         rotate: 0,
+        transformOrigin: '50% 50%',
       },
     }
 

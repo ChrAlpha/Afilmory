@@ -79,6 +79,7 @@ export const computeViewerImageFrame = (
     height: displayHeight,
     borderRadius: 0,
     rotate: 0,
+    transformOrigin: '50% 50%',
   }
 }
 
@@ -112,5 +113,6 @@ export const projectViewerImageFrame = (
     height: frame.height * snapshot.scale,
     borderRadius: snapshot.borderRadius,
     rotate: snapshot.rotate,
+    transformOrigin: '50% 18%',
   }
 }

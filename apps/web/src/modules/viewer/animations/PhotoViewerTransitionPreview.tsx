@@ -4,6 +4,18 @@ import { useEffect, useRef } from 'react'
 
 import type { PhotoViewerTransition } from './types'
 
+const BASE_TRANSITION = {
+  duration: 0.42,
+  ease: [0.22, 1, 0.36, 1] as const,
+}
+
+const ENTRY_HANDOFF_LEAD = 0.1
+
+const ENTRY_FADE_OUT_TRANSITION = {
+  duration: 0.1,
+  ease: [0.32, 0.72, 0, 1] as const,
+}
+
 interface PhotoViewerTransitionPreviewProps {
   transition: PhotoViewerTransition
   onReady?: () => void
@@ -15,15 +27,6 @@ export const PhotoViewerTransitionPreview = ({
   onReady,
   onComplete,
 }: PhotoViewerTransitionPreviewProps) => {
-  const baseTransition = {
-    duration: 0.42,
-    ease: [0.22, 1, 0.36, 1] as const,
-  }
-  const entryHandoffLead = 0.1
-  const entryFadeOutTransition = {
-    duration: 0.1,
-    ease: [0.32, 0.72, 0, 1] as const,
-  }
   const thumbHash = typeof transition.thumbHash === 'string' ? transition.thumbHash : null
   const x = useMotionValue(transition.from.left)
   const y = useMotionValue(transition.from.top)
@@ -34,6 +37,10 @@ export const PhotoViewerTransitionPreview = ({
   const opacity = useMotionValue(1)
   const hasReadyRef = useRef(false)
   const hasCompletedRef = useRef(false)
+  const transformOrigin =
+    transition.variant === 'exit'
+      ? (transition.from.transformOrigin ?? transition.to.transformOrigin ?? '50% 50%')
+      : (transition.to.transformOrigin ?? transition.from.transformOrigin ?? '50% 50%')
 
   useEffect(() => {
     opacity.set(1)
@@ -54,7 +61,7 @@ export const PhotoViewerTransitionPreview = ({
       if (transition.variant === 'entry') {
         onReady?.()
         const fadeAnimation = animate(opacity, 0, {
-          ...entryFadeOutTransition,
+          ...ENTRY_FADE_OUT_TRANSITION,
           onComplete: complete,
         })
         animations.push(fadeAnimation)
@@ -65,22 +72,19 @@ export const PhotoViewerTransitionPreview = ({
     }
 
     const animations = [
-      animate(x, transition.to.left, baseTransition),
-      animate(y, transition.to.top, baseTransition),
+      animate(x, transition.to.left, BASE_TRANSITION),
+      animate(y, transition.to.top, BASE_TRANSITION),
       animate(width, transition.to.width, {
-        ...baseTransition,
+        ...BASE_TRANSITION,
         onComplete: ready,
       }),
-      animate(height, transition.to.height, baseTransition),
-      animate(borderRadius, transition.to.borderRadius, baseTransition),
-      animate(rotate, transition.to.rotate, baseTransition),
+      animate(height, transition.to.height, BASE_TRANSITION),
+      animate(borderRadius, transition.to.borderRadius, BASE_TRANSITION),
+      animate(rotate, transition.to.rotate, BASE_TRANSITION),
     ]
 
     if (transition.variant === 'entry') {
-      readyTimer = window.setTimeout(
-        ready,
-        Math.max(0, (baseTransition.duration - entryHandoffLead) * 1000),
-      )
+      readyTimer = window.setTimeout(ready, Math.max(0, (BASE_TRANSITION.duration - ENTRY_HANDOFF_LEAD) * 1000))
     }
 
     return () => {
@@ -91,7 +95,6 @@ export const PhotoViewerTransitionPreview = ({
     }
   }, [
     borderRadius,
-    entryHandoffLead,
     height,
     onReady,
     onComplete,
@@ -121,7 +124,7 @@ export const PhotoViewerTransitionPreview = ({
         borderRadius,
         opacity,
         rotate,
-        transformOrigin: '50% 50%',
+        transformOrigin,
       }}
     >
       <div className="relative h-full w-full overflow-hidden bg-black">
