@@ -1008,6 +1008,36 @@ export class WebGLImageViewerEngine extends ImageViewerEngineBase {
     return this.scale
   }
 
+  public updateCallbacks({
+    onZoomChange,
+    onImageCopied,
+    onLoadingStateChange,
+  }: Pick<Required<WebGLImageViewerProps>, 'onZoomChange' | 'onImageCopied' | 'onLoadingStateChange'>) {
+    this.onZoomChange = onZoomChange
+    this.onImageCopied = onImageCopied
+    this.onLoadingStateChange = onLoadingStateChange
+  }
+
+  public updateInteractionConfig({
+    wheel,
+    pinch,
+    doubleClick,
+    panning,
+  }: Pick<Required<WebGLImageViewerProps>, 'wheel' | 'pinch' | 'doubleClick' | 'panning'>) {
+    this.config.wheel = wheel
+    this.config.pinch = pinch
+    this.config.doubleClick = doubleClick
+    this.config.panning = panning
+
+    if (panning.disabled) {
+      this.isDragging = false
+    }
+
+    if (pinch.disabled) {
+      this.lastTouchDistance = 0
+    }
+  }
+
   public setTileOutlineEnabled(enabled: boolean) {
     this.tileOutlineEnabled = enabled
     this.render()
