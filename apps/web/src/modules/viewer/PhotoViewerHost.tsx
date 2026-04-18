@@ -34,6 +34,13 @@ export const PhotoViewerHost = () => {
   const isOpen = viewerState.isOpen || photoViewer.isOpen
   const isViewerMounted = isOpen || isClosing
 
+  const blurFocusedDescendant = useCallback((container: HTMLElement | null) => {
+    const {activeElement} = document
+    if (activeElement instanceof HTMLElement && container?.contains(activeElement)) {
+      activeElement.blur()
+    }
+  }, [])
+
   useTitle(isViewerMounted ? currentPhoto?.title || 'Not Found' : null)
 
   useEffect(() => {
@@ -51,6 +58,7 @@ export const PhotoViewerHost = () => {
       return
     }
 
+    blurFocusedDescendant(ref)
     ref.setAttribute('inert', '')
     ref.setAttribute('aria-hidden', 'true')
 
@@ -58,12 +66,13 @@ export const PhotoViewerHost = () => {
       ref.removeAttribute('inert')
       ref.removeAttribute('aria-hidden')
     }
-  }, [isOpen, ref])
+  }, [blurFocusedDescendant, isOpen, ref])
 
   const handleClose = useCallback(() => {
+    blurFocusedDescendant(ref)
     setIsClosing(true)
     closeViewerRef.current()
-  }, [])
+  }, [blurFocusedDescendant, ref])
 
   const handleExitComplete = useCallback(() => {
     setIsClosing(false)
@@ -121,6 +130,7 @@ export const PhotoViewerHost = () => {
     <RootPortal>
       <RootPortalProvider value={rootPortalValue}>
         <RemoveScroll
+          enabled={isViewerMounted}
           style={
             {
               ...(accentColor ? { '--color-accent': accentColor } : {}),

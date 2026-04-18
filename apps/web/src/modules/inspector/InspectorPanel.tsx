@@ -147,7 +147,7 @@ export const InspectorPanel: FC<{
                 type="button"
                 className="bg-material-ultra-thick pointer-events-auto flex size-8 items-center justify-center rounded-full text-white backdrop-blur-2xl duration-200 hover:bg-black/40"
                 onClick={onClose}
-                aria-label="Collapse inspector panel"
+                aria-label={t('inspector.action.collapsePanel')}
               >
                 <i className="i-lucide-panel-right-close" />
               </button>

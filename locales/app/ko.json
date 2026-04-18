@@ -319,6 +319,8 @@
   "gallery.view.list": "목록 보기",
   "gallery.view.map": "지도 보기",
   "gallery.view.masonry": "폭포수",
+  "inspector.action.closeDetails": "세부 정보 닫기",
+  "inspector.action.collapsePanel": "정보 패널 접기",
   "loading.converting": "변환 중...",
   "loading.default": "로딩 중",
   "loading.heic.converting": "HEIC/HEIF 이미지 형식 변환 중...",

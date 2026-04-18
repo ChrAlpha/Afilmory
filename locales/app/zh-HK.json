@@ -319,6 +319,8 @@
   "gallery.view.list": "清單檢視",
   "gallery.view.map": "地圖檢視",
   "gallery.view.masonry": "瀑布流",
+  "inspector.action.closeDetails": "關閉詳細資訊",
+  "inspector.action.collapsePanel": "收起資訊面板",
   "loading.converting": "轉換中...",
   "loading.default": "載入中",
   "loading.heic.converting": "正在轉換 HEIC/HEIF 圖像格式...",

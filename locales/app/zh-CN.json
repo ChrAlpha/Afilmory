@@ -344,6 +344,8 @@
   "gallery.view.list": "列表视图",
   "gallery.view.map": "地图视图",
   "gallery.view.masonry": "瀑布流",
+  "inspector.action.closeDetails": "关闭详情",
+  "inspector.action.collapsePanel": "收起信息面板",
   "inspector.tab.comments": "评论",
   "inspector.tab.info": "信息",
   "loading.converting": "转换中...",

@@ -347,6 +347,8 @@
   "gallery.view.list": "List View",
   "gallery.view.map": "Map View",
   "gallery.view.masonry": "Masonry",
+  "inspector.action.closeDetails": "Close details",
+  "inspector.action.collapsePanel": "Collapse inspector panel",
   "inspector.tab.comments": "Comments",
   "inspector.tab.info": "Info",
   "loading.converting": "Converting...",

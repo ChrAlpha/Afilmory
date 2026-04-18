@@ -319,6 +319,8 @@
   "gallery.view.list": "リスト表示",
   "gallery.view.map": "マップ表示",
   "gallery.view.masonry": "ウォーターフォール",
+  "inspector.action.closeDetails": "詳細を閉じる",
+  "inspector.action.collapsePanel": "インスペクターパネルを折りたたむ",
   "loading.converting": "変換中...",
   "loading.default": "読み込み中",
   "loading.heic.converting": "HEIC/HEIF 画像フォーマットを変換中...",
