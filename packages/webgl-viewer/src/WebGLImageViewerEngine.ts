@@ -1,6 +1,6 @@
 import { LoadingState } from './enum'
 import { ImageViewerEngineBase } from './ImageViewerEngineBase'
-import type { DebugInfo, WebGLImageViewerProps } from './interface'
+import type { DebugInfo, WebGLImageViewerEngineInstance, WebGLImageViewerProps } from './interface'
 import { createShader, FRAGMENT_SHADER_SOURCE, VERTEX_SHADER_SOURCE } from './shaders'
 import TextureWorkerRaw from './texture.worker?raw'
 
@@ -33,7 +33,7 @@ const SIMPLE_LOD_LEVELS = [
 ] as const
 
 // 简化的 WebGL 图像查看器引擎
-export class WebGLImageViewerEngine extends ImageViewerEngineBase {
+export class WebGLImageViewerEngine extends ImageViewerEngineBase implements WebGLImageViewerEngineInstance {
   private canvas: HTMLCanvasElement
   private gl: WebGLRenderingContext
   private program!: WebGLProgram
@@ -1006,6 +1006,39 @@ export class WebGLImageViewerEngine extends ImageViewerEngineBase {
 
   public getScale(): number {
     return this.scale
+  }
+
+  public setInteractionConfig(
+    config: Partial<Pick<Required<WebGLImageViewerProps>, 'doubleClick' | 'panning' | 'pinch'>>,
+  ) {
+    if (config.panning) {
+      this.config.panning = {
+        ...this.config.panning,
+        ...config.panning,
+      }
+
+      if (this.config.panning.disabled) {
+        this.isDragging = false
+      }
+    }
+
+    if (config.pinch) {
+      this.config.pinch = {
+        ...this.config.pinch,
+        ...config.pinch,
+      }
+
+      if (this.config.pinch.disabled) {
+        this.lastTouchDistance = 0
+      }
+    }
+
+    if (config.doubleClick) {
+      this.config.doubleClick = {
+        ...this.config.doubleClick,
+        ...config.doubleClick,
+      }
+    }
   }
 
   public setTileOutlineEnabled(enabled: boolean) {

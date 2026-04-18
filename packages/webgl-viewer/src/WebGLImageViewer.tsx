@@ -16,7 +16,7 @@ import {
   defaultWheelConfig,
 } from './constants'
 import DebugInfoComponent from './DebugInfo'
-import type { WebGLImageViewerProps, WebGLImageViewerRef } from './interface'
+import type { WebGLImageViewerEngineInstance, WebGLImageViewerProps, WebGLImageViewerRef } from './interface'
 import { WebGLImageViewerEngine } from './WebGLImageViewerEngine'
 
 /**
@@ -50,10 +50,61 @@ export const WebGLImageViewer = ({
     ref?: React.RefObject<WebGLImageViewerRef | null>
   }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const viewerRef = useRef<WebGLImageViewerEngine | null>(null)
+  const viewerRef = useRef<WebGLImageViewerEngineInstance | null>(null)
   const [tileOutlineEnabled, setTileOutlineEnabled] = useState(false)
 
-  const setDebugInfo = useRef((() => {}) as (debugInfo: any) => void)
+  const setDebugInfoRef = useRef((() => {}) as (debugInfo: any) => void)
+
+  const mergedWheelConfig = useMemo(
+    () => ({
+      ...defaultWheelConfig,
+      ...wheel,
+    }),
+    [wheel],
+  )
+  const mergedPinchConfig = useMemo(
+    () => ({
+      ...defaultPinchConfig,
+      ...pinch,
+    }),
+    [pinch],
+  )
+  const mergedDoubleClickConfig = useMemo(
+    () => ({
+      ...defaultDoubleClickConfig,
+      ...doubleClick,
+    }),
+    [doubleClick],
+  )
+  const mergedPanningConfig = useMemo(
+    () => ({
+      ...defaultPanningConfig,
+      ...panning,
+    }),
+    [panning],
+  )
+  const mergedAlignmentAnimation = useMemo(
+    () => ({
+      ...defaultAlignmentAnimation,
+      ...alignmentAnimation,
+    }),
+    [alignmentAnimation],
+  )
+  const mergedVelocityAnimation = useMemo(
+    () => ({
+      ...defaultVelocityAnimation,
+      ...velocityAnimation,
+    }),
+    [velocityAnimation],
+  )
+
+  const pinchConfigRef = useRef(mergedPinchConfig)
+  const doubleClickConfigRef = useRef(mergedDoubleClickConfig)
+  const panningConfigRef = useRef(mergedPanningConfig)
+
+  pinchConfigRef.current = mergedPinchConfig
+  doubleClickConfigRef.current = mergedDoubleClickConfig
+  panningConfigRef.current = mergedPanningConfig
 
   const config: Required<WebGLImageViewerProps> = useMemo(
     () => ({
@@ -64,21 +115,15 @@ export const WebGLImageViewer = ({
       initialScale,
       minScale,
       maxScale,
-      wheel: {
-        ...defaultWheelConfig,
-        ...wheel,
-      },
-      pinch: { ...defaultPinchConfig, ...pinch },
-      doubleClick: { ...defaultDoubleClickConfig, ...doubleClick },
-      panning: { ...defaultPanningConfig, ...panning },
+      wheel: mergedWheelConfig,
+      pinch: pinchConfigRef.current,
+      doubleClick: doubleClickConfigRef.current,
+      panning: panningConfigRef.current,
       limitToBounds,
       centerOnInit,
       smooth,
-      alignmentAnimation: {
-        ...defaultAlignmentAnimation,
-        ...alignmentAnimation,
-      },
-      velocityAnimation: { ...defaultVelocityAnimation, ...velocityAnimation },
+      alignmentAnimation: mergedAlignmentAnimation,
+      velocityAnimation: mergedVelocityAnimation,
       onZoomChange: onZoomChange || (() => {}),
       onImageCopied: onImageCopied || (() => {}),
       onLoadingStateChange: onLoadingStateChange || (() => {}),
@@ -92,15 +137,12 @@ export const WebGLImageViewer = ({
       initialScale,
       minScale,
       maxScale,
-      wheel,
-      pinch,
-      doubleClick,
-      panning,
+      mergedWheelConfig,
       limitToBounds,
       centerOnInit,
       smooth,
-      alignmentAnimation,
-      velocityAnimation,
+      mergedAlignmentAnimation,
+      mergedVelocityAnimation,
       onZoomChange,
       onImageCopied,
       onLoadingStateChange,
@@ -116,13 +158,21 @@ export const WebGLImageViewer = ({
   }))
 
   useEffect(() => {
+    viewerRef.current?.setInteractionConfig({
+      pinch: mergedPinchConfig,
+      doubleClick: mergedDoubleClickConfig,
+      panning: mergedPanningConfig,
+    })
+  }, [mergedDoubleClickConfig, mergedPanningConfig, mergedPinchConfig])
+
+  useEffect(() => {
     if (!canvasRef.current) return
 
     const webGLImageViewerEngine = new WebGLImageViewerEngine(
       canvasRef.current,
       config,
-      debug ? setDebugInfo : undefined,
-    )
+      debug ? setDebugInfoRef : undefined,
+    ) as unknown as WebGLImageViewerEngineInstance
 
     try {
       // 如果提供了尺寸，传递给loadImage进行优化
@@ -181,7 +231,7 @@ export const WebGLImageViewer = ({
           onToggleOutline={handleOutlineToggle}
           ref={(e) => {
             if (e) {
-              setDebugInfo.current = e.updateDebugInfo
+              setDebugInfoRef.current = e.updateDebugInfo
             }
           }}
         />

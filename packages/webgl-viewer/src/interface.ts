@@ -61,6 +61,20 @@ export interface WebGLImageViewerRef {
   getScale: () => number
 }
 
+export interface WebGLImageViewerEngineInstance {
+  loadImage: (url: string, preknownWidth?: number, preknownHeight?: number) => Promise<void>
+  zoomIn: (animated?: boolean) => void
+  zoomOut: (animated?: boolean) => void
+  resetView: () => void
+  getScale: () => number
+  setInteractionConfig: (
+    config: Partial<Pick<Required<WebGLImageViewerProps>, 'doubleClick' | 'panning' | 'pinch'>>,
+  ) => void
+  setTileOutlineEnabled: (enabled: boolean) => void
+  isTileOutlineEnabled: () => boolean
+  destroy: () => void
+}
+
 export interface DebugInfo {
   scale: number
   relativeScale: number
