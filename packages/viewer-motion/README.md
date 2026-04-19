@@ -1,4 +1,4 @@
-# @afilmory/media-viewer
+# @afilmory/viewer-motion
 
 Reusable primitives for fullscreen media viewers:
 
@@ -17,9 +17,9 @@ This package intentionally does not own:
 
 The host app provides those concerns and wires them to:
 
-- `useMediaViewerTransitions`
+- `useViewerTransitions`
 - `SharedElementTransitionPreview`
-- `useMediaViewerMobileInteractions`
+- `useViewerMobileInteractions`
 
 ## Expected trigger contract
 

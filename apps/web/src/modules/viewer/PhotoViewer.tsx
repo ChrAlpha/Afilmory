@@ -3,17 +3,18 @@ import './PhotoViewer.css'
 import 'swiper/css'
 import 'swiper/css/navigation'
 
-import {
-  type AnimationFrameRect,
-  computeViewerMediaFrame,
-  type MobileViewerDismissSnapshot,
-  projectViewerMediaFrame,
-  SharedElementTransitionPreview,
-  useMediaViewerMobileInteractions,
-  useMediaViewerTransitions,
-} from '@afilmory/media-viewer'
 import { Thumbhash } from '@afilmory/ui'
 import { Spring } from '@afilmory/utils'
+import {
+  type AnimationFrameRect,
+  createInspectorSheetPresentation,
+  type MobileViewerDismissSnapshot,
+  projectDismissedViewerMediaFrame,
+  resolveInspectorSheetHeight,
+  SharedElementTransitionPreview,
+  useViewerMobileInteractions,
+  useViewerTransitions,
+} from '@afilmory/viewer-motion'
 import { AnimatePresence, m } from 'motion/react'
 import { Fragment, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -75,7 +76,7 @@ export const PhotoViewer = ({
     handleEntryTransitionReady,
     handleEntryTransitionComplete,
     handleExitAnimationComplete,
-  } = useMediaViewerTransitions({
+  } = useViewerTransitions({
     exitOverrideFrame: dragDismissExitFrame,
     isOpen,
     triggerElement,
@@ -108,15 +109,15 @@ export const PhotoViewer = ({
 
       const viewportRect =
         containerRef.current?.getBoundingClientRect() ?? new DOMRect(0, 0, window.innerWidth, window.innerHeight)
-      const baseFrame = computeViewerMediaFrame(
-        {
+      const projectedFrame = projectDismissedViewerMediaFrame({
+        item: {
           width: currentPhoto.width,
           height: currentPhoto.height,
         },
         viewportRect,
-        true,
-      )
-      const projectedFrame = projectViewerMediaFrame(baseFrame, viewportRect, snapshot)
+        snapshot,
+        isMobile: true,
+      })
 
       setDragDismissExitFrame(projectedFrame)
       onDragDismiss?.(projectedFrame)
@@ -145,7 +146,7 @@ export const PhotoViewer = ({
     backdropOpacity,
     chromeOpacity,
     chromeY,
-  } = useMediaViewerMobileInteractions({
+  } = useViewerMobileInteractions({
     enabled: isMobile && isOpen,
     isImageZoomed,
     onDismiss: handleDragDismiss,
@@ -548,10 +549,12 @@ export const PhotoViewer = ({
               <Suspense>
                 {isMobile ? (
                   <MobilePhotoInspectorSheet
+                    createPresentation={createInspectorSheetPresentation}
                     currentPhoto={currentPhoto}
                     exifData={currentPhoto.exif}
                     isInteractive={isMobileInspectorVisible}
                     progress={inspectorProgress}
+                    resolveHeight={resolveInspectorSheetHeight}
                     onClose={closeInspector}
                   />
                 ) : (

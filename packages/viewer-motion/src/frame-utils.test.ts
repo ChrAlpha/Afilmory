@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { computeViewerMediaFrame, projectViewerMediaFrame } from './frame-utils'
+import * as frameUtils from './frame-utils'
+
+const { computeViewerMediaFrame, projectViewerMediaFrame } = frameUtils
 
 test('computeViewerMediaFrame reserves desktop chrome and fits landscape media', () => {
   const frame = computeViewerMediaFrame(
@@ -61,6 +63,30 @@ test('projectViewerMediaFrame applies scale, translation, radius, and rotation a
   assert.equal(frame.top, 202.4)
   assert.equal(frame.width, 270)
   assert.equal(frame.height, 180)
+  assert.equal(frame.borderRadius, 14)
+  assert.equal(frame.rotate, 3)
+})
+
+test('projectDismissedViewerMediaFrame combines viewer frame calculation with the dismiss snapshot projection', () => {
+  assert.equal(typeof frameUtils.projectDismissedViewerMediaFrame, 'function')
+
+  const frame = frameUtils.projectDismissedViewerMediaFrame({
+    item: { width: 3000, height: 4000 },
+    viewportRect: { left: 0, top: 0, width: 1000, height: 800 },
+    snapshot: {
+      scale: 0.9,
+      translateX: 40,
+      translateY: 80,
+      borderRadius: 14,
+      rotate: 3,
+    },
+    isMobile: true,
+  })
+
+  assert.equal(frame.left, 286.2)
+  assert.equal(frame.top, 94.4)
+  assert.equal(frame.width, 507.6)
+  assert.equal(Number(frame.height.toFixed(1)), 676.8)
   assert.equal(frame.borderRadius, 14)
   assert.equal(frame.rotate, 3)
 })

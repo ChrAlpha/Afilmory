@@ -55,7 +55,7 @@ export interface ViewerFrameTransformSnapshot {
 
 export interface MobileViewerDismissSnapshot extends ViewerFrameTransformSnapshot {}
 
-export interface UseMediaViewerTransitionsParams<TItem extends ViewerTransitionItem> {
+export interface UseViewerTransitionsParams<TItem extends ViewerTransitionItem> {
   currentDisplaySrc?: string | null
   currentItem?: TItem
   exitOverrideFrame?: AnimationFrameRect | null
@@ -67,7 +67,7 @@ export interface UseMediaViewerTransitionsParams<TItem extends ViewerTransitionI
   triggerElement: HTMLElement | null
 }
 
-export interface UseMediaViewerTransitionsResult {
+export interface UseViewerTransitionsResult {
   containerRef: RefObject<HTMLDivElement | null>
   entryTransition: ViewerTransition | null
   exitTransition: ViewerTransition | null
@@ -81,7 +81,7 @@ export interface UseMediaViewerTransitionsResult {
   thumbHash: string | null
 }
 
-export interface UseMediaViewerMobileInteractionsOptions {
+export interface UseViewerMobileInteractionsOptions {
   enabled: boolean
   isImageZoomed: boolean
   onDismiss: (snapshot: MobileViewerDismissSnapshot) => void

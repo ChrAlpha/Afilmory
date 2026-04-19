@@ -134,6 +134,27 @@ export const projectViewerMediaFrame = (
   }
 }
 
+interface ProjectDismissedViewerMediaFrameParams {
+  item: Pick<ViewerTransitionItem, 'width' | 'height'>
+  isMobile: boolean
+  layout?: ViewerFrameLayout
+  snapshot: ViewerFrameTransformSnapshot
+  viewportRect: ViewportRectLike | null
+}
+
+export const projectDismissedViewerMediaFrame = ({
+  item,
+  isMobile,
+  layout,
+  snapshot,
+  viewportRect,
+}: ProjectDismissedViewerMediaFrameParams): AnimationFrameRect => {
+  const resolvedViewportRect = getViewportRect(viewportRect)
+  const baseFrame = computeViewerMediaFrame(item, resolvedViewportRect, isMobile, layout)
+
+  return projectViewerMediaFrame(baseFrame, resolvedViewportRect, snapshot)
+}
+
 export const resolveViewerTransitionImageSrc = (
   item: Pick<ViewerTransitionItem, 'previewSrc' | 'fullSrc'>,
   currentDisplaySrc: string | null | undefined,

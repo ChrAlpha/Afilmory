@@ -5,6 +5,9 @@ export const clamp = (value: number, min: number, max: number) => Math.min(Math.
 export const easeOutCubic = (value: number) => 1 - Math.pow(1 - value, 3)
 export const easeOutQuad = (value: number) => 1 - Math.pow(1 - value, 2)
 
+export const resolveInspectorSheetHeight = (viewportHeight: number) =>
+  clamp(viewportHeight * 0.68, 360, viewportHeight - 72)
+
 export interface MobileViewerInteractionConfig {
   dismissThresholdFactor: number
   dismissThresholdMax: number
@@ -68,5 +71,21 @@ export const createDismissPresentationSnapshot = ({
     scale: clamp(1 - dismissVisual * 0.13, 0.8, 1),
     rotate: (translateX / Math.max(viewportWidth, 1)) * (4.5 + dismissVisual * 2.5),
     borderRadius: dismissVisual * 22,
+  }
+}
+
+interface CreateInspectorSheetPresentationParams {
+  progress: number
+  sheetHeight: number
+}
+
+export const createInspectorSheetPresentation = ({ progress, sheetHeight }: CreateInspectorSheetPresentationParams) => {
+  const clampedProgress = clamp(progress, 0, 1)
+  const visualProgress = easeOutCubic(clampedProgress)
+
+  return {
+    opacity: clamp(clampedProgress * 1.6, 0, 1),
+    scale: 0.965 + visualProgress * 0.035,
+    y: (1 - visualProgress) * (sheetHeight + 28),
   }
 }

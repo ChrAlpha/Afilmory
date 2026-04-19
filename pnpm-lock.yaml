@@ -438,9 +438,6 @@ importers:
       '@afilmory/hooks':
         specifier: workspace:*
         version: link:../../packages/hooks
-      '@afilmory/media-viewer':
-        specifier: workspace:*
-        version: link:../../packages/media-viewer
       '@afilmory/sdk':
         specifier: workspace:*
         version: link:../../packages/sdk
@@ -453,6 +450,9 @@ importers:
       '@afilmory/utils':
         specifier: workspace:*
         version: link:../../packages/utils
+      '@afilmory/viewer-motion':
+        specifier: workspace:*
+        version: link:../../packages/viewer-motion
       '@afilmory/webgl-viewer':
         specifier: workspace:*
         version: link:../../packages/webgl-viewer
@@ -1328,28 +1328,6 @@ importers:
         specifier: ^19.2.4
         version: 19.2.4(react@19.2.4)
 
-  packages/media-viewer:
-    dependencies:
-      '@use-gesture/react':
-        specifier: 10.3.1
-        version: 10.3.1(react@19.2.4)
-      motion:
-        specifier: 12.34.0
-        version: 12.34.0(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
-    devDependencies:
-      '@types/react':
-        specifier: 'catalog:'
-        version: 19.2.14
-      '@types/react-dom':
-        specifier: 'catalog:'
-        version: 19.2.3(@types/react@19.2.14)
-      react:
-        specifier: ^19.2.4
-        version: 19.2.4
-      react-dom:
-        specifier: ^19.2.4
-        version: 19.2.4(react@19.2.4)
-
   packages/renderer:
     devDependencies:
       '@resvg/resvg-js':
@@ -1474,6 +1452,28 @@ importers:
       motion:
         specifier: 12.34.0
         version: 12.34.0(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+
+  packages/viewer-motion:
+    dependencies:
+      '@use-gesture/react':
+        specifier: 10.3.1
+        version: 10.3.1(react@19.2.4)
+      motion:
+        specifier: 12.34.0
+        version: 12.34.0(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+    devDependencies:
+      '@types/react':
+        specifier: 'catalog:'
+        version: 19.2.14
+      '@types/react-dom':
+        specifier: 'catalog:'
+        version: 19.2.3(@types/react@19.2.14)
+      react:
+        specifier: ^19.2.4
+        version: 19.2.4
+      react-dom:
+        specifier: ^19.2.4
+        version: 19.2.4(react@19.2.4)
 
   packages/webgl-viewer:
     devDependencies:

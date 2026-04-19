@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 
+import { VIEWER_TRANSITION_TRIGGER_ATTRIBUTE } from './contracts'
 import {
   computeViewerMediaFrame,
   escapeAttributeValue,
@@ -8,13 +9,13 @@ import {
 } from './frame-utils'
 import type {
   AnimationFrameRect,
-  UseMediaViewerTransitionsParams,
-  UseMediaViewerTransitionsResult,
+  UseViewerTransitionsParams,
+  UseViewerTransitionsResult,
   ViewerTransition,
   ViewerTransitionState,
 } from './types'
 
-export const useMediaViewerTransitions = <
+export const useViewerTransitions = <
   TItem extends { id: string; width?: number | null; height?: number | null } & {
     previewSrc?: string | null
     fullSrc?: string | null
@@ -28,9 +29,9 @@ export const useMediaViewerTransitions = <
   isOpen,
   onExitComplete,
   layout,
-  triggerAttribute = 'data-viewer-transition-id',
+  triggerAttribute = VIEWER_TRANSITION_TRIGGER_ATTRIBUTE,
   triggerElement,
-}: UseMediaViewerTransitionsParams<TItem>): UseMediaViewerTransitionsResult => {
+}: UseViewerTransitionsParams<TItem>): UseViewerTransitionsResult => {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const cachedTriggerRef = useRef<HTMLElement | null>(triggerElement)
   const wasOpenRef = useRef(isOpen)

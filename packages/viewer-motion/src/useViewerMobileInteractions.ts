@@ -10,7 +10,7 @@ import {
   resolveMobileViewerInteractionMetrics,
 } from './mobile-interaction-utils'
 import { ViewerSpring } from './spring'
-import type { UseMediaViewerMobileInteractionsOptions } from './types'
+import type { UseViewerMobileInteractionsOptions } from './types'
 import { useWindowViewport } from './useWindowViewport'
 
 interface GestureMemoState {
@@ -19,12 +19,12 @@ interface GestureMemoState {
   startedWithInspectorOpen: boolean
 }
 
-export const useMediaViewerMobileInteractions = ({
+export const useViewerMobileInteractions = ({
   enabled,
   isImageZoomed,
   onDismiss,
   viewport,
-}: UseMediaViewerMobileInteractionsOptions) => {
+}: UseViewerMobileInteractionsOptions) => {
   const windowViewport = useWindowViewport()
   const viewportWidth = viewport?.width || windowViewport.width || 390
   const viewportHeight = viewport?.height || windowViewport.height || 844
