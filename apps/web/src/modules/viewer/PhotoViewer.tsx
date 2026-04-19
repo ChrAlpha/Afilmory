@@ -550,6 +550,7 @@ export const PhotoViewer = ({
                   <MobilePhotoInspectorSheet
                     currentPhoto={currentPhoto}
                     exifData={currentPhoto.exif}
+                    isInteractive={isMobileInspectorVisible}
                     progress={inspectorProgress}
                     onClose={closeInspector}
                   />

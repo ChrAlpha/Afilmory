@@ -2,7 +2,7 @@ import type { PickedExif } from '@afilmory/builder'
 import { MobileTabGroup, MobileTabItem } from '@afilmory/ui'
 import { useQuery } from '@tanstack/react-query'
 import { m, type MotionValue, useTransform } from 'motion/react'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { injectConfig } from '~/config'
@@ -17,6 +17,7 @@ type Tab = 'info' | 'comments'
 interface MobilePhotoInspectorSheetProps {
   currentPhoto: PhotoManifest
   exifData: PickedExif | null
+  isInteractive: boolean
   progress: MotionValue<number>
   onClose: () => void
 }
@@ -27,12 +28,13 @@ const easeOutCubic = (value: number) => 1 - Math.pow(1 - value, 3)
 export const MobilePhotoInspectorSheet = ({
   currentPhoto,
   exifData,
+  isInteractive,
   progress,
   onClose,
 }: MobilePhotoInspectorSheetProps) => {
   const { t } = useTranslation()
   const [activeTab, setActiveTab] = useState<Tab>('info')
-  const [isInteractive, setIsInteractive] = useState(false)
+  const sheetRef = useRef<HTMLDivElement>(null)
   const viewportHeight = useViewport((value) => value.h) || (typeof window !== 'undefined' ? window.innerHeight : 844)
   const sheetHeight = useMemo(() => clamp(viewportHeight * 0.68, 360, viewportHeight - 72), [viewportHeight])
 
@@ -49,14 +51,22 @@ export const MobilePhotoInspectorSheet = ({
   }, [currentPhoto.id])
 
   useEffect(() => {
-    const unsubscribe = progress.on('change', (latest) => {
-      setIsInteractive(clamp(latest, 0, 1) > 0.02)
-    })
-
-    return () => {
-      unsubscribe()
+    if (!isInteractive) {
+      const {activeElement} = document
+      if (activeElement instanceof HTMLElement && sheetRef.current?.contains(activeElement)) {
+        activeElement.blur()
+      }
     }
-  }, [progress])
+  }, [isInteractive])
+
+  const handleClose = useCallback(() => {
+    const {activeElement} = document
+    if (activeElement instanceof HTMLElement && sheetRef.current?.contains(activeElement)) {
+      activeElement.blur()
+    }
+
+    onClose()
+  }, [onClose])
 
   const clampedProgress = useTransform(() => clamp(progress.get(), 0, 1))
   const sheetProgress = useTransform(() => easeOutCubic(clampedProgress.get()))
@@ -68,12 +78,14 @@ export const MobilePhotoInspectorSheet = ({
     <m.div
       className="pointer-events-none fixed inset-x-0 bottom-0 z-30 flex justify-center"
       aria-hidden={!isInteractive}
+      inert={!isInteractive}
       style={{
         y: sheetY,
         opacity: sheetOpacity,
       }}
     >
       <m.div
+        ref={sheetRef}
         className="bg-material-ultra-thick border-accent/20 pointer-events-auto relative flex w-full max-w-screen-lg flex-col overflow-hidden rounded-t-[28px] border text-white backdrop-blur-3xl"
         style={{
           height: sheetHeight,
@@ -131,7 +143,7 @@ export const MobilePhotoInspectorSheet = ({
             <button
               type="button"
               className="hover:bg-accent/10 absolute top-1 right-0 flex size-9 items-center justify-center rounded-xl text-white/80 transition-colors hover:text-white"
-              onClick={onClose}
+              onClick={handleClose}
               aria-label="Close details"
             >
               <i className="i-mingcute-close-line text-lg" />
