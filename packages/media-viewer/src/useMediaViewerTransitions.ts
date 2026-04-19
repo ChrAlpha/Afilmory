@@ -1,44 +1,36 @@
-import type { RefObject } from 'react'
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 
-import type { PhotoManifest } from '~/types/photo'
+import {
+  computeViewerMediaFrame,
+  escapeAttributeValue,
+  getBorderRadius,
+  resolveViewerTransitionImageSrc,
+} from './frame-utils'
+import type {
+  AnimationFrameRect,
+  UseMediaViewerTransitionsParams,
+  UseMediaViewerTransitionsResult,
+  ViewerTransition,
+  ViewerTransitionState,
+} from './types'
 
-import type { AnimationFrameRect, PhotoViewerTransition, PhotoViewerTransitionState } from './types'
-import { computeViewerImageFrame, escapeAttributeValue, getBorderRadius } from './utils'
-
-interface UsePhotoViewerTransitionsParams {
-  exitOverrideFrame?: AnimationFrameRect | null
-  isOpen: boolean
-  triggerElement: HTMLElement | null
-  currentPhoto: PhotoManifest | undefined
-  currentBlobSrc: string | null
-  isMobile: boolean
-  onExitComplete?: () => void
-}
-
-interface UsePhotoViewerTransitionsResult {
-  containerRef: RefObject<HTMLDivElement | null>
-  entryTransition: PhotoViewerTransition | null
-  exitTransition: PhotoViewerTransition | null
-  isViewerContentVisible: boolean
-  isEntryAnimating: boolean
-  shouldRenderBackdrop: boolean
-  thumbHash: string | null
-  shouldRenderThumbhash: boolean
-  handleEntryTransitionReady: () => void
-  handleEntryTransitionComplete: () => void
-  handleExitAnimationComplete: () => void
-}
-
-export const usePhotoViewerTransitions = ({
+export const useMediaViewerTransitions = <
+  TItem extends { id: string; width?: number | null; height?: number | null } & {
+    previewSrc?: string | null
+    fullSrc?: string | null
+    thumbHash?: string | null
+  },
+>({
+  currentDisplaySrc = null,
+  currentItem,
   exitOverrideFrame = null,
-  isOpen,
-  triggerElement,
-  currentPhoto,
-  currentBlobSrc,
   isMobile,
+  isOpen,
   onExitComplete,
-}: UsePhotoViewerTransitionsParams): UsePhotoViewerTransitionsResult => {
+  layout,
+  triggerAttribute = 'data-viewer-transition-id',
+  triggerElement,
+}: UseMediaViewerTransitionsParams<TItem>): UseMediaViewerTransitionsResult => {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const cachedTriggerRef = useRef<HTMLElement | null>(triggerElement)
   const wasOpenRef = useRef(isOpen)
@@ -47,8 +39,8 @@ export const usePhotoViewerTransitions = ({
   const hiddenTriggerPrevVisibilityRef = useRef<string | null>(null)
   const viewerImageFrameRef = useRef<AnimationFrameRect | null>(null)
 
-  const [entryTransition, setEntryTransition] = useState<PhotoViewerTransition | null>(null)
-  const [exitTransition, setExitTransition] = useState<PhotoViewerTransition | null>(null)
+  const [entryTransition, setEntryTransition] = useState<ViewerTransition | null>(null)
+  const [exitTransition, setExitTransition] = useState<ViewerTransition | null>(null)
   const [isViewerContentVisible, setIsViewerContentVisible] = useState(false)
 
   const restoreTriggerElementVisibility = useCallback(() => {
@@ -72,35 +64,35 @@ export const usePhotoViewerTransitions = ({
   }, [])
 
   const resolveTriggerElement = useCallback((): HTMLElement | null => {
-    if (!currentPhoto) return null
+    if (!currentItem) return null
 
-    const isElementForCurrentPhoto = (el: HTMLElement) => {
-      return el.dataset.photoId === currentPhoto.id
+    const isElementForCurrentItem = (element: HTMLElement) => {
+      return element.getAttribute(triggerAttribute) === currentItem.id
     }
 
-    if (triggerElement && triggerElement.isConnected && isElementForCurrentPhoto(triggerElement)) {
+    if (triggerElement && triggerElement.isConnected && isElementForCurrentItem(triggerElement)) {
       cachedTriggerRef.current = triggerElement
       return triggerElement
     }
 
-    const selector = `[data-photo-id="${escapeAttributeValue(currentPhoto.id)}"]`
-    const liveTriggerEl = typeof document === 'undefined' ? null : document.querySelector<HTMLElement>(selector)
+    const selector = `[${triggerAttribute}="${escapeAttributeValue(currentItem.id)}"]`
+    const liveTriggerElement = typeof document === 'undefined' ? null : document.querySelector<HTMLElement>(selector)
 
-    if (liveTriggerEl && liveTriggerEl.isConnected) {
-      cachedTriggerRef.current = liveTriggerEl
-      return liveTriggerEl
+    if (liveTriggerElement && liveTriggerElement.isConnected) {
+      cachedTriggerRef.current = liveTriggerElement
+      return liveTriggerElement
     }
 
     if (
       cachedTriggerRef.current &&
       cachedTriggerRef.current.isConnected &&
-      isElementForCurrentPhoto(cachedTriggerRef.current)
+      isElementForCurrentItem(cachedTriggerRef.current)
     ) {
       return cachedTriggerRef.current
     }
 
     return null
-  }, [currentPhoto, triggerElement])
+  }, [currentItem, triggerAttribute, triggerElement])
 
   useEffect(() => {
     if (triggerElement) {
@@ -128,36 +120,38 @@ export const usePhotoViewerTransitions = ({
   }, [isOpen, resolveTriggerElement])
 
   useLayoutEffect(() => {
-    if (!isOpen || !currentPhoto) return
+    if (!isOpen || !currentItem) return
     if (entryTransition || isViewerContentVisible) return
 
-    const triggerEl = resolveTriggerElement()
+    const resolvedTriggerElement = resolveTriggerElement()
 
-    if (!triggerEl) {
+    if (!resolvedTriggerElement) {
       setIsViewerContentVisible(true)
       return
     }
 
-    const fromRect = triggerEl.getBoundingClientRect()
+    const fromRect = resolvedTriggerElement.getBoundingClientRect()
     const viewportRect = viewerBoundsRef.current ?? containerRef.current?.getBoundingClientRect() ?? null
-    const targetFrame = computeViewerImageFrame(currentPhoto, viewportRect, isMobile)
+    const targetFrame = computeViewerMediaFrame(currentItem, viewportRect, isMobile, layout)
 
     if (!fromRect.width || !fromRect.height || !targetFrame.width || !targetFrame.height) {
       setIsViewerContentVisible(true)
       return
     }
 
-    const imageSrc = currentBlobSrc || currentPhoto.thumbnailUrl || currentPhoto.originalUrl || null
+    const imageSrc = resolveViewerTransitionImageSrc(currentItem, currentDisplaySrc, 'entry')
 
     if (!imageSrc) {
       setIsViewerContentVisible(true)
       return
     }
 
-    hideTriggerElement(triggerEl)
+    hideTriggerElement(resolvedTriggerElement)
 
     const triggerBorderRadius = getBorderRadius(
-      triggerEl instanceof HTMLImageElement && triggerEl.parentElement ? triggerEl.parentElement : triggerEl,
+      resolvedTriggerElement instanceof HTMLImageElement && resolvedTriggerElement.parentElement
+        ? resolvedTriggerElement.parentElement
+        : resolvedTriggerElement,
     )
 
     viewerImageFrameRef.current = {
@@ -171,10 +165,10 @@ export const usePhotoViewerTransitions = ({
 
     const frameForAnimation = viewerImageFrameRef.current ?? targetFrame
 
-    const transitionState: PhotoViewerTransitionState = {
-      photoId: currentPhoto.id,
+    const transitionState: ViewerTransitionState = {
+      itemId: currentItem.id,
       imageSrc,
-      thumbHash: currentPhoto.thumbHash,
+      thumbHash: currentItem.thumbHash,
       from: {
         left: fromRect.left,
         top: fromRect.top,
@@ -195,14 +189,15 @@ export const usePhotoViewerTransitions = ({
 
     setEntryTransition({ ...transitionState, variant: 'entry' })
   }, [
-    isOpen,
-    currentPhoto,
+    currentDisplaySrc,
+    currentItem,
     entryTransition,
-    isViewerContentVisible,
-    currentBlobSrc,
-    isMobile,
-    resolveTriggerElement,
     hideTriggerElement,
+    isMobile,
+    isOpen,
+    isViewerContentVisible,
+    layout,
+    resolveTriggerElement,
   ])
 
   useEffect(() => {
@@ -212,15 +207,15 @@ export const usePhotoViewerTransitions = ({
       return
     }
 
-    if (!wasOpenRef.current || !currentPhoto) {
+    if (!wasOpenRef.current || !currentItem) {
       wasOpenRef.current = false
       restoreTriggerElementVisibility()
       return
     }
 
-    const triggerEl = resolveTriggerElement()
+    const resolvedTriggerElement = resolveTriggerElement()
 
-    if (!triggerEl || !triggerEl.isConnected) {
+    if (!resolvedTriggerElement || !resolvedTriggerElement.isConnected) {
       wasOpenRef.current = false
       restoreTriggerElementVisibility()
       setExitTransition(null)
@@ -228,7 +223,7 @@ export const usePhotoViewerTransitions = ({
       return
     }
 
-    const targetRect = triggerEl.getBoundingClientRect()
+    const targetRect = resolvedTriggerElement.getBoundingClientRect()
     if (!targetRect.width || !targetRect.height) {
       wasOpenRef.current = false
       restoreTriggerElementVisibility()
@@ -238,7 +233,7 @@ export const usePhotoViewerTransitions = ({
     }
 
     const viewportRect = viewerBoundsRef.current ?? containerRef.current?.getBoundingClientRect() ?? null
-    const computedFrame = computeViewerImageFrame(currentPhoto, viewportRect, isMobile)
+    const computedFrame = computeViewerMediaFrame(currentItem, viewportRect, isMobile, layout)
     const viewerFrame = exitOverrideFrame ?? viewerImageFrameRef.current ?? computedFrame
 
     if (!viewerFrame.width || !viewerFrame.height) {
@@ -252,10 +247,12 @@ export const usePhotoViewerTransitions = ({
     viewerImageFrameRef.current = viewerFrame
 
     const borderRadius = getBorderRadius(
-      triggerEl instanceof HTMLImageElement && triggerEl.parentElement ? triggerEl.parentElement : triggerEl,
+      resolvedTriggerElement instanceof HTMLImageElement && resolvedTriggerElement.parentElement
+        ? resolvedTriggerElement.parentElement
+        : resolvedTriggerElement,
     )
 
-    const imageSrc = currentPhoto.thumbnailUrl || currentBlobSrc || currentPhoto.originalUrl || null
+    const imageSrc = resolveViewerTransitionImageSrc(currentItem, currentDisplaySrc, 'exit')
 
     if (!imageSrc) {
       wasOpenRef.current = false
@@ -266,12 +263,12 @@ export const usePhotoViewerTransitions = ({
     }
 
     restoreTriggerElementVisibility()
-    hideTriggerElement(triggerEl)
+    hideTriggerElement(resolvedTriggerElement)
 
-    const transitionState: PhotoViewerTransitionState = {
-      photoId: currentPhoto.id,
+    const transitionState: ViewerTransitionState = {
+      itemId: currentItem.id,
       imageSrc,
-      thumbHash: currentPhoto.thumbHash,
+      thumbHash: currentItem.thumbHash,
       from: {
         left: viewerFrame.left,
         top: viewerFrame.top,
@@ -294,15 +291,16 @@ export const usePhotoViewerTransitions = ({
 
     wasOpenRef.current = false
   }, [
-    isOpen,
-    currentPhoto,
-    currentBlobSrc,
+    currentDisplaySrc,
+    currentItem,
     exitOverrideFrame,
+    hideTriggerElement,
     isMobile,
+    isOpen,
+    layout,
+    onExitComplete,
     resolveTriggerElement,
     restoreTriggerElementVisibility,
-    hideTriggerElement,
-    onExitComplete,
   ])
 
   useLayoutEffect(() => {
@@ -334,25 +332,25 @@ export const usePhotoViewerTransitions = ({
     restoreTriggerElementVisibility()
     setExitTransition(null)
     onExitComplete?.()
-  }, [restoreTriggerElementVisibility, onExitComplete])
+  }, [onExitComplete, restoreTriggerElementVisibility])
 
   const isEntryAnimating = Boolean(entryTransition)
   const shouldRenderBackdrop = isOpen || Boolean(exitTransition) || Boolean(entryTransition)
 
-  const thumbHash = typeof currentPhoto?.thumbHash === 'string' ? currentPhoto.thumbHash : null
+  const thumbHash = typeof currentItem?.thumbHash === 'string' ? currentItem.thumbHash : null
   const shouldRenderThumbhash = shouldRenderBackdrop && Boolean(thumbHash)
 
   return {
     containerRef,
     entryTransition,
     exitTransition,
-    isViewerContentVisible,
-    isEntryAnimating,
-    shouldRenderBackdrop,
-    thumbHash,
-    shouldRenderThumbhash,
-    handleEntryTransitionReady,
     handleEntryTransitionComplete,
+    handleEntryTransitionReady,
     handleExitAnimationComplete,
+    isEntryAnimating,
+    isViewerContentVisible,
+    shouldRenderBackdrop,
+    shouldRenderThumbhash,
+    thumbHash,
   }
 }

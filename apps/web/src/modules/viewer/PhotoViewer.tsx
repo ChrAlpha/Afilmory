@@ -3,6 +3,15 @@ import './PhotoViewer.css'
 import 'swiper/css'
 import 'swiper/css/navigation'
 
+import {
+  type AnimationFrameRect,
+  computeViewerMediaFrame,
+  type MobileViewerDismissSnapshot,
+  projectViewerMediaFrame,
+  SharedElementTransitionPreview,
+  useMediaViewerMobileInteractions,
+  useMediaViewerTransitions,
+} from '@afilmory/media-viewer'
 import { Thumbhash } from '@afilmory/ui'
 import { Spring } from '@afilmory/utils'
 import { AnimatePresence, m } from 'motion/react'
@@ -20,15 +29,9 @@ import { ShareModal } from '~/modules/social/ShareModal'
 import type { PhotoManifest } from '~/types/photo'
 
 import { ReactionRail } from '../social'
-import { PhotoViewerTransitionPreview } from './animations/PhotoViewerTransitionPreview'
-import type { AnimationFrameRect } from './animations/types'
-import { usePhotoViewerTransitions } from './animations/usePhotoViewerTransitions'
-import { computeViewerImageFrame, projectViewerImageFrame } from './animations/utils'
 import { GalleryThumbnail } from './GalleryThumbnail'
 import { MobilePhotoInspectorSheet } from './MobilePhotoInspectorSheet'
 import { ProgressiveImage } from './ProgressiveImage'
-import type { MobilePhotoViewerDismissSnapshot } from './usePhotoViewerMobileInteractions'
-import { usePhotoViewerMobileInteractions } from './usePhotoViewerMobileInteractions'
 
 interface PhotoViewerProps {
   photos: PhotoManifest[]
@@ -72,12 +75,21 @@ export const PhotoViewer = ({
     handleEntryTransitionReady,
     handleEntryTransitionComplete,
     handleExitAnimationComplete,
-  } = usePhotoViewerTransitions({
+  } = useMediaViewerTransitions({
     exitOverrideFrame: dragDismissExitFrame,
     isOpen,
     triggerElement,
-    currentPhoto,
-    currentBlobSrc,
+    currentItem: currentPhoto
+      ? {
+          id: currentPhoto.id,
+          width: currentPhoto.width,
+          height: currentPhoto.height,
+          previewSrc: currentPhoto.thumbnailUrl,
+          fullSrc: currentPhoto.originalUrl,
+          thumbHash: currentPhoto.thumbHash,
+        }
+      : undefined,
+    currentDisplaySrc: currentBlobSrc,
     isMobile,
     onExitComplete,
   })
@@ -88,7 +100,7 @@ export const PhotoViewer = ({
   }, [onClose])
 
   const handleDragDismiss = useCallback(
-    (snapshot: MobilePhotoViewerDismissSnapshot) => {
+    (snapshot: MobileViewerDismissSnapshot) => {
       if (!currentPhoto) {
         handleCloseRequest()
         return
@@ -96,8 +108,15 @@ export const PhotoViewer = ({
 
       const viewportRect =
         containerRef.current?.getBoundingClientRect() ?? new DOMRect(0, 0, window.innerWidth, window.innerHeight)
-      const baseFrame = computeViewerImageFrame(currentPhoto, viewportRect, true)
-      const projectedFrame = projectViewerImageFrame(baseFrame, viewportRect, snapshot)
+      const baseFrame = computeViewerMediaFrame(
+        {
+          width: currentPhoto.width,
+          height: currentPhoto.height,
+        },
+        viewportRect,
+        true,
+      )
+      const projectedFrame = projectViewerMediaFrame(baseFrame, viewportRect, snapshot)
 
       setDragDismissExitFrame(projectedFrame)
       onDragDismiss?.(projectedFrame)
@@ -126,7 +145,7 @@ export const PhotoViewer = ({
     backdropOpacity,
     chromeOpacity,
     chromeY,
-  } = usePhotoViewerMobileInteractions({
+  } = useMediaViewerMobileInteractions({
     enabled: isMobile && isOpen,
     isImageZoomed,
     onDismiss: handleDragDismiss,
@@ -550,18 +569,24 @@ export const PhotoViewer = ({
         )}
       </AnimatePresence>
       {entryTransition && (
-        <PhotoViewerTransitionPreview
-          key={`${entryTransition.variant}-${entryTransition.photoId}`}
+        <SharedElementTransitionPreview
+          key={`${entryTransition.variant}-${entryTransition.itemId}`}
           transition={entryTransition}
           onReady={handleEntryTransitionReady}
           onComplete={handleEntryTransitionComplete}
+          renderPlaceholder={(thumbHash) => (
+            <Thumbhash thumbHash={thumbHash} className="pointer-events-none absolute inset-0 h-full w-full" />
+          )}
         />
       )}
       {exitTransition && (
-        <PhotoViewerTransitionPreview
-          key={`${exitTransition.variant}-${exitTransition.photoId}`}
+        <SharedElementTransitionPreview
+          key={`${exitTransition.variant}-${exitTransition.itemId}`}
           transition={exitTransition}
           onComplete={handleExitAnimationComplete}
+          renderPlaceholder={(thumbHash) => (
+            <Thumbhash thumbHash={thumbHash} className="pointer-events-none absolute inset-0 h-full w-full" />
+          )}
         />
       )}
     </>

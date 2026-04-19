@@ -174,7 +174,7 @@ export const MasonryPhotoItem = memo(({ data, width }: { data: PhotoManifest; wi
         width,
         height: calculatedHeight,
       }}
-      data-photo-id={data.id}
+      data-viewer-transition-id={data.id}
       onClick={handleClick}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}

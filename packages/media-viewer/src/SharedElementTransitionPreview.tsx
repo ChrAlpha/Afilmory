@@ -1,20 +1,22 @@
-import { Thumbhash } from '@afilmory/ui'
 import { animate, m, useMotionValue } from 'motion/react'
+import type { ReactNode } from 'react'
 import { useEffect, useRef } from 'react'
 
-import type { PhotoViewerTransition } from './types'
+import type { ViewerTransition } from './types'
 
-interface PhotoViewerTransitionPreviewProps {
-  transition: PhotoViewerTransition
-  onReady?: () => void
+interface SharedElementTransitionPreviewProps {
   onComplete: () => void
+  onReady?: () => void
+  renderPlaceholder?: (thumbHash: string) => ReactNode
+  transition: ViewerTransition
 }
 
-export const PhotoViewerTransitionPreview = ({
+export const SharedElementTransitionPreview = ({
   transition,
   onReady,
   onComplete,
-}: PhotoViewerTransitionPreviewProps) => {
+  renderPlaceholder,
+}: SharedElementTransitionPreviewProps) => {
   const baseTransition = {
     duration: 0.42,
     ease: [0.22, 1, 0.36, 1] as const,
@@ -98,9 +100,13 @@ export const PhotoViewerTransitionPreview = ({
 
   return (
     <m.div
-      className="pointer-events-none fixed top-0 left-0 z-[60]"
-      data-variant={`photo-viewer-transition-${transition.variant}`}
+      data-viewer-transition-variant={transition.variant}
       style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        zIndex: 60,
+        pointerEvents: 'none',
         x,
         y,
         width,
@@ -111,15 +117,29 @@ export const PhotoViewerTransitionPreview = ({
         transformOrigin: '50% 50%',
       }}
     >
-      <div className="relative h-full w-full overflow-hidden bg-black">
-        {thumbHash && (
-          <Thumbhash thumbHash={thumbHash} className="pointer-events-none absolute inset-0 h-full w-full" />
-        )}
+      <div
+        style={{
+          position: 'relative',
+          width: '100%',
+          height: '100%',
+          overflow: 'hidden',
+          background: 'black',
+        }}
+      >
+        {thumbHash && renderPlaceholder ? (
+          <div style={{ position: 'absolute', inset: 0 }}>{renderPlaceholder(thumbHash)}</div>
+        ) : null}
         <img
           src={transition.imageSrc}
           alt=""
-          className="absolute inset-0 h-full w-full object-cover"
           draggable={false}
+          style={{
+            position: 'absolute',
+            inset: 0,
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+          }}
         />
       </div>
     </m.div>

@@ -1,0 +1,28 @@
+{
+  "name": "@afilmory/media-viewer",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*"
+  },
+  "scripts": {
+    "test": "tsx --test src/*.test.ts",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@use-gesture/react": "10.3.1",
+    "motion": "catalog:"
+  },
+  "devDependencies": {
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4"
+  },
+  "peerDependencies": {
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1"
+  }
+}
