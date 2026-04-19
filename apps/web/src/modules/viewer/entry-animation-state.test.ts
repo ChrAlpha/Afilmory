@@ -1,7 +1,12 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { getProgressiveImageVisualReady, resolvePhotoViewerEntryState } from './entry-animation-state'
+import {
+  getProgressiveImageVisualReady,
+  isThumbnailElementVisuallyReady,
+  resolvePhotoViewerEntryState,
+  shouldHideCurrentViewerImage,
+} from './entry-animation-state'
 
 test('resolvePhotoViewerEntryState mounts the heavy image stage immediately when there is no trigger element', () => {
   const state = resolvePhotoViewerEntryState({
@@ -18,7 +23,7 @@ test('resolvePhotoViewerEntryState mounts the heavy image stage immediately when
   })
 })
 
-test('resolvePhotoViewerEntryState keeps the lightweight catch-up layer visible during entry handoff until the image becomes visually ready', () => {
+test('resolvePhotoViewerEntryState keeps the lightweight catch-up layer hidden before the viewer stage is ready to hand off', () => {
   const state = resolvePhotoViewerEntryState({
     hasTriggerElement: true,
     isCurrentImageVisualReady: false,
@@ -29,6 +34,21 @@ test('resolvePhotoViewerEntryState keeps the lightweight catch-up layer visible 
 
   assert.deepEqual(state, {
     shouldMountImageStage: false,
+    shouldShowEntryImageCatchup: false,
+  })
+})
+
+test('resolvePhotoViewerEntryState shows the lightweight catch-up layer only during the late entry handoff while the viewer stage is visible', () => {
+  const state = resolvePhotoViewerEntryState({
+    hasTriggerElement: true,
+    isCurrentImageVisualReady: false,
+    isEntryTransitionActive: true,
+    isOpen: true,
+    isViewerContentVisible: true,
+  })
+
+  assert.deepEqual(state, {
+    shouldMountImageStage: true,
     shouldShowEntryImageCatchup: true,
   })
 })
@@ -73,6 +93,54 @@ test('getProgressiveImageVisualReady falls back to the high-res render state whe
       isHighResImageRendered: false,
       isThumbnailLoaded: false,
       thumbnailSrc: undefined,
+    }),
+    false,
+  )
+})
+
+test('isThumbnailElementVisuallyReady treats a thumbnail with resolved dimensions as ready even before the browser flips complete', () => {
+  assert.equal(
+    isThumbnailElementVisuallyReady({
+      currentSrc: 'https://zeta.ichr.me/gallery/thumbnails/20260404-SGL_3042.jpg',
+      naturalWidth: 600,
+      src: 'https://zeta.ichr.me/gallery/thumbnails/20260404-SGL_3042.jpg',
+      thumbnailSrc: 'https://zeta.ichr.me/gallery/thumbnails/20260404-SGL_3042.jpg',
+    }),
+    true,
+  )
+
+  assert.equal(
+    isThumbnailElementVisuallyReady({
+      currentSrc: 'https://zeta.ichr.me/gallery/thumbnails/20260404-SGL_3042.jpg',
+      naturalWidth: 0,
+      src: 'https://zeta.ichr.me/gallery/thumbnails/20260404-SGL_3042.jpg',
+      thumbnailSrc: 'https://zeta.ichr.me/gallery/thumbnails/20260404-SGL_3042.jpg',
+    }),
+    false,
+  )
+})
+
+test('shouldHideCurrentViewerImage keeps the real current slide hidden only while the catch-up layer owns the handoff', () => {
+  assert.equal(
+    shouldHideCurrentViewerImage({
+      isCurrentImage: true,
+      isEntryImageCatchupVisible: true,
+    }),
+    true,
+  )
+
+  assert.equal(
+    shouldHideCurrentViewerImage({
+      isCurrentImage: true,
+      isEntryImageCatchupVisible: false,
+    }),
+    false,
+  )
+
+  assert.equal(
+    shouldHideCurrentViewerImage({
+      isCurrentImage: false,
+      isEntryImageCatchupVisible: true,
     }),
     false,
   )

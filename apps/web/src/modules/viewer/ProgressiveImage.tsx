@@ -15,7 +15,7 @@ import { LivePhotoBadge } from '~/modules/media/LivePhotoBadge'
 import { LivePhotoVideo } from '~/modules/media/LivePhotoVideo'
 
 import { DOMImageViewer } from './DOMImageViewer'
-import { getProgressiveImageVisualReady } from './entry-animation-state'
+import { getProgressiveImageVisualReady, isThumbnailElementVisuallyReady } from './entry-animation-state'
 import {
   createContextMenuItems,
   useImageLoader,
@@ -127,10 +127,12 @@ export const ProgressiveImage = ({
     const thumbnailElement = thumbnailRef.current
     const isAlreadyLoaded =
       loadedThumbnailSrcSet.has(thumbnailSrc) ||
-      (thumbnailElement?.currentSrc?.includes(thumbnailSrc) &&
-        thumbnailElement.complete &&
-        thumbnailElement.naturalWidth > 0) ||
-      (thumbnailElement?.src === thumbnailSrc && thumbnailElement.complete && thumbnailElement.naturalWidth > 0)
+      isThumbnailElementVisuallyReady({
+        currentSrc: thumbnailElement?.currentSrc,
+        naturalWidth: thumbnailElement?.naturalWidth,
+        src: thumbnailElement?.src,
+        thumbnailSrc,
+      })
 
     if (isAlreadyLoaded) {
       loadedThumbnailSrcSet.add(thumbnailSrc)

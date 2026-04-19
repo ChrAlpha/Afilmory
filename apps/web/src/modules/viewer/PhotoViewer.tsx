@@ -30,7 +30,7 @@ import { ShareModal } from '~/modules/social/ShareModal'
 import type { PhotoManifest } from '~/types/photo'
 
 import { ReactionRail } from '../social'
-import { resolvePhotoViewerEntryState } from './entry-animation-state'
+import { resolvePhotoViewerEntryState, shouldHideCurrentViewerImage } from './entry-animation-state'
 import { GalleryThumbnail } from './GalleryThumbnail'
 import { MobilePhotoInspectorSheet } from './MobilePhotoInspectorSheet'
 import { ProgressiveImage } from './ProgressiveImage'
@@ -485,7 +485,10 @@ export const PhotoViewer = ({
                         >
                           {photos.map((photo, index) => {
                             const isCurrentImage = index === currentIndex
-                            const hideCurrentImage = isCurrentImage && isEntryAnimating && !isViewerContentVisible
+                            const hideCurrentImage = shouldHideCurrentViewerImage({
+                              isCurrentImage,
+                              isEntryImageCatchupVisible: shouldShowEntryImageCatchup,
+                            })
                             return (
                               <SwiperSlide
                                 key={photo.id}
@@ -512,7 +515,8 @@ export const PhotoViewer = ({
                                   }
                                   className="relative flex h-full w-full items-center justify-center"
                                   style={{
-                                    visibility: hideCurrentImage ? 'hidden' : 'visible',
+                                    opacity: hideCurrentImage ? 0 : 1,
+                                    pointerEvents: hideCurrentImage ? 'none' : undefined,
                                   }}
                                 >
                                   <ProgressiveImage
