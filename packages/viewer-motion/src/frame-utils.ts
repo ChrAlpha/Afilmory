@@ -113,6 +113,7 @@ export const computeViewerMediaFrame = (
     height: displayHeight,
     borderRadius: 0,
     rotate: 0,
+    transformOrigin: isMobile ? '50% 18%' : '50% 50%',
   }
 }
 
@@ -131,6 +132,7 @@ export const projectViewerMediaFrame = (
     height: frame.height * snapshot.scale,
     borderRadius: snapshot.borderRadius,
     rotate: snapshot.rotate,
+    transformOrigin: frame.transformOrigin,
   }
 }
 

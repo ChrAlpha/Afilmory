@@ -162,6 +162,7 @@ export const useViewerTransitions = <
       height: targetFrame.height,
       borderRadius: targetFrame.borderRadius,
       rotate: targetFrame.rotate,
+      transformOrigin: targetFrame.transformOrigin,
     }
 
     const frameForAnimation = viewerImageFrameRef.current ?? targetFrame
@@ -177,6 +178,7 @@ export const useViewerTransitions = <
         height: fromRect.height,
         borderRadius: triggerBorderRadius,
         rotate: 0,
+        transformOrigin: '50% 50%',
       },
       to: {
         left: frameForAnimation.left,
@@ -185,6 +187,7 @@ export const useViewerTransitions = <
         height: frameForAnimation.height,
         borderRadius: frameForAnimation.borderRadius,
         rotate: frameForAnimation.rotate,
+        transformOrigin: frameForAnimation.transformOrigin,
       },
     }
 
@@ -277,6 +280,7 @@ export const useViewerTransitions = <
         height: viewerFrame.height,
         borderRadius: viewerFrame.borderRadius,
         rotate: viewerFrame.rotate,
+        transformOrigin: viewerFrame.transformOrigin,
       },
       to: {
         left: targetRect.left,
@@ -285,6 +289,7 @@ export const useViewerTransitions = <
         height: targetRect.height,
         borderRadius,
         rotate: 0,
+        transformOrigin: '50% 50%',
       },
     }
 

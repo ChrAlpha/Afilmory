@@ -19,6 +19,7 @@ test('computeViewerMediaFrame reserves desktop chrome and fits landscape media',
     height: 510,
     borderRadius: 0,
     rotate: 0,
+    transformOrigin: '50% 50%',
   })
 })
 
@@ -36,7 +37,18 @@ test('computeViewerMediaFrame fits portrait media inside the available height', 
     height: 736,
     borderRadius: 0,
     rotate: 0,
+    transformOrigin: '50% 50%',
   })
+})
+
+test('computeViewerMediaFrame keeps the mobile viewer transform origin aligned with the dismiss gesture anchor', () => {
+  const frame = computeViewerMediaFrame(
+    { width: 3000, height: 4000 },
+    { left: 0, top: 0, width: 390, height: 844 },
+    true,
+  )
+
+  assert.equal(frame.transformOrigin, '50% 18%')
 })
 
 test('projectViewerMediaFrame applies scale, translation, radius, and rotation around the mobile origin', () => {
@@ -48,6 +60,7 @@ test('projectViewerMediaFrame applies scale, translation, radius, and rotation a
       height: 200,
       borderRadius: 0,
       rotate: 0,
+      transformOrigin: '50% 18%',
     },
     { left: 0, top: 0, width: 1000, height: 800 },
     {
@@ -65,6 +78,7 @@ test('projectViewerMediaFrame applies scale, translation, radius, and rotation a
   assert.equal(frame.height, 180)
   assert.equal(frame.borderRadius, 14)
   assert.equal(frame.rotate, 3)
+  assert.equal(frame.transformOrigin, '50% 18%')
 })
 
 test('projectDismissedViewerMediaFrame combines viewer frame calculation with the dismiss snapshot projection', () => {
@@ -89,4 +103,5 @@ test('projectDismissedViewerMediaFrame combines viewer frame calculation with th
   assert.equal(Number(frame.height.toFixed(1)), 676.8)
   assert.equal(frame.borderRadius, 14)
   assert.equal(frame.rotate, 3)
+  assert.equal(frame.transformOrigin, '50% 18%')
 })
