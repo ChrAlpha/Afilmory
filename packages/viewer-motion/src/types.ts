@@ -75,6 +75,7 @@ export interface UseViewerTransitionsResult {
   handleEntryTransitionComplete: () => void
   handleEntryTransitionReady: () => void
   handleExitAnimationComplete: () => void
+  hasTransitionTrigger: boolean
   isEntryAnimating: boolean
   isViewerContentVisible: boolean
   shouldRenderBackdrop: boolean

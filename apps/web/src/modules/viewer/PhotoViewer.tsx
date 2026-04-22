@@ -77,6 +77,7 @@ export const PhotoViewer = ({
     containerRef,
     entryTransition,
     exitTransition,
+    hasTransitionTrigger,
     isViewerContentVisible,
     isEntryAnimating,
     shouldRenderBackdrop,
@@ -178,10 +179,10 @@ export const PhotoViewer = ({
       return
     }
 
-    if (!triggerElement) {
+    if (!hasTransitionTrigger) {
       setIsCurrentImageVisualReady(true)
     }
-  }, [isOpen, triggerElement])
+  }, [hasTransitionTrigger, isOpen])
 
   useEffect(() => {
     if (entryTransition?.variant === 'entry') {
@@ -259,7 +260,7 @@ export const PhotoViewer = ({
 
   const currentThumbHash = transitionThumbHash
   const { shouldMountImageStage, shouldShowEntryImageCatchup } = resolvePhotoViewerEntryState({
-    hasTriggerElement: Boolean(triggerElement),
+    hasTransitionTrigger,
     isCurrentImageVisualReady,
     isEntryTransitionActive: entryTransition?.variant === 'entry',
     isOpen,

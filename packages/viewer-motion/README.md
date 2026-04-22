@@ -148,6 +148,7 @@ export function Gallery({ items }: { items: MediaItem[] }) {
     containerRef,
     entryTransition,
     exitTransition,
+    hasTransitionTrigger,
     isViewerContentVisible,
     shouldRenderBackdrop,
     handleEntryTransitionReady,
@@ -174,6 +175,8 @@ export function Gallery({ items }: { items: MediaItem[] }) {
   const closeViewer = () => {
     setIsOpen(false)
   }
+
+  const shouldMountStage = isOpen && (isViewerContentVisible || !hasTransitionTrigger)
 
   return (
     <>
@@ -204,23 +207,25 @@ export function Gallery({ items }: { items: MediaItem[] }) {
             Close
           </button>
 
-          <div
-            className="viewer-stage"
-            style={{
-              opacity: isViewerContentVisible ? 1 : 0,
-              transition: 'opacity 150ms ease',
-            }}
-          >
-            <img
-              src={currentItem.fullSrc}
-              alt={currentItem.title}
+          {shouldMountStage ? (
+            <div
+              className="viewer-stage"
               style={{
-                width: '100%',
-                height: '100%',
-                objectFit: 'contain',
+                opacity: isViewerContentVisible ? 1 : 0,
+                transition: 'opacity 150ms ease',
               }}
-            />
-          </div>
+            >
+              <img
+                src={currentItem.fullSrc}
+                alt={currentItem.title}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'contain',
+                }}
+              />
+            </div>
+          ) : null}
         </div>
       )}
 
@@ -394,6 +399,7 @@ Key outputs:
 
 - `containerRef`: attach this to the viewer shell
 - `entryTransition` / `exitTransition`: pass into `SharedElementTransitionPreview`
+- `hasTransitionTrigger`: whether the current item has a live transition source, either from the clicked element or trigger recovery
 - `isViewerContentVisible`: handoff signal for your real content
 - `shouldRenderBackdrop`: useful for backdrop and placeholder layers
 - `handleEntryTransitionReady`
@@ -439,7 +445,9 @@ If your viewer does not use the full viewport, the transition target frame will 
 
 ### 4. Rendering the real viewer content too early
 
-Use `isViewerContentVisible` as the handoff signal instead of showing the real viewer immediately after `isOpen`.
+Use `hasTransitionTrigger` together with `isViewerContentVisible` to avoid mounting the heavyweight viewer stage underneath an active shared-element entry.
+
+If you skip this and only check whether `triggerElement` is non-null, history-driven opens can recover a trigger internally while your real viewer is already visible, which produces a duplicate fullscreen image during the entry handoff.
 
 ### 5. Closing before the list/grid thumbnail is live again
 

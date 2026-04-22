@@ -1,5 +1,5 @@
 interface ResolvePhotoViewerEntryStateParams {
-  hasTriggerElement: boolean
+  hasTransitionTrigger: boolean
   isCurrentImageVisualReady: boolean
   isEntryTransitionActive: boolean
   isOpen: boolean
@@ -30,15 +30,15 @@ interface ShouldHideCurrentViewerImageParams {
 }
 
 export const resolvePhotoViewerEntryState = ({
-  hasTriggerElement,
+  hasTransitionTrigger,
   isCurrentImageVisualReady,
   isEntryTransitionActive,
   isOpen,
   isViewerContentVisible,
 }: ResolvePhotoViewerEntryStateParams): ResolvePhotoViewerEntryStateResult => {
-  const shouldMountImageStage = isOpen && (isViewerContentVisible || !hasTriggerElement)
+  const shouldMountImageStage = isOpen && (isViewerContentVisible || !hasTransitionTrigger)
   const shouldShowEntryImageCatchup = Boolean(
-    isOpen && hasTriggerElement && isViewerContentVisible && (isEntryTransitionActive || !isCurrentImageVisualReady),
+    isOpen && hasTransitionTrigger && isViewerContentVisible && (isEntryTransitionActive || !isCurrentImageVisualReady),
   )
 
   return {

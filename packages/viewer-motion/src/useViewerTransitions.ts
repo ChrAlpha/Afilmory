@@ -1,12 +1,8 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 
 import { VIEWER_TRANSITION_TRIGGER_ATTRIBUTE } from './contracts'
-import {
-  computeViewerMediaFrame,
-  escapeAttributeValue,
-  getBorderRadius,
-  resolveViewerTransitionImageSrc,
-} from './frame-utils'
+import { computeViewerMediaFrame, getBorderRadius, resolveViewerTransitionImageSrc } from './frame-utils'
+import { resolveViewerTransitionTriggerElement } from './trigger-utils'
 import type {
   AnimationFrameRect,
   UseViewerTransitionsParams,
@@ -43,6 +39,12 @@ export const useViewerTransitions = <
   const [entryTransition, setEntryTransition] = useState<ViewerTransition | null>(null)
   const [exitTransition, setExitTransition] = useState<ViewerTransition | null>(null)
   const [isViewerContentVisible, setIsViewerContentVisible] = useState(false)
+  const resolvedTriggerElementForCurrentItem = resolveViewerTransitionTriggerElement({
+    cachedTriggerElement: cachedTriggerRef.current,
+    currentItem,
+    triggerAttribute,
+    triggerElement,
+  })
 
   const restoreTriggerElementVisibility = useCallback(() => {
     const trigger = hiddenTriggerRef.current
@@ -65,34 +67,18 @@ export const useViewerTransitions = <
   }, [])
 
   const resolveTriggerElement = useCallback((): HTMLElement | null => {
-    if (!currentItem) return null
+    const resolvedTriggerElement = resolveViewerTransitionTriggerElement({
+      cachedTriggerElement: cachedTriggerRef.current,
+      currentItem,
+      triggerAttribute,
+      triggerElement,
+    })
 
-    const isElementForCurrentItem = (element: HTMLElement) => {
-      return element.getAttribute(triggerAttribute) === currentItem.id
+    if (resolvedTriggerElement) {
+      cachedTriggerRef.current = resolvedTriggerElement
     }
 
-    if (triggerElement && triggerElement.isConnected && isElementForCurrentItem(triggerElement)) {
-      cachedTriggerRef.current = triggerElement
-      return triggerElement
-    }
-
-    const selector = `[${triggerAttribute}="${escapeAttributeValue(currentItem.id)}"]`
-    const liveTriggerElement = typeof document === 'undefined' ? null : document.querySelector<HTMLElement>(selector)
-
-    if (liveTriggerElement && liveTriggerElement.isConnected) {
-      cachedTriggerRef.current = liveTriggerElement
-      return liveTriggerElement
-    }
-
-    if (
-      cachedTriggerRef.current &&
-      cachedTriggerRef.current.isConnected &&
-      isElementForCurrentItem(cachedTriggerRef.current)
-    ) {
-      return cachedTriggerRef.current
-    }
-
-    return null
+    return resolvedTriggerElement
   }, [currentItem, triggerAttribute, triggerElement])
 
   useEffect(() => {
@@ -341,6 +327,7 @@ export const useViewerTransitions = <
   }, [onExitComplete, restoreTriggerElementVisibility])
 
   const isEntryAnimating = Boolean(entryTransition)
+  const hasTransitionTrigger = Boolean(resolvedTriggerElementForCurrentItem)
   const shouldRenderBackdrop = isOpen || Boolean(exitTransition) || Boolean(entryTransition)
 
   const thumbHash = typeof currentItem?.thumbHash === 'string' ? currentItem.thumbHash : null
@@ -353,6 +340,7 @@ export const useViewerTransitions = <
     handleEntryTransitionComplete,
     handleEntryTransitionReady,
     handleExitAnimationComplete,
+    hasTransitionTrigger,
     isEntryAnimating,
     isViewerContentVisible,
     shouldRenderBackdrop,

@@ -10,7 +10,7 @@ import {
 
 test('resolvePhotoViewerEntryState mounts the heavy image stage immediately when there is no trigger element', () => {
   const state = resolvePhotoViewerEntryState({
-    hasTriggerElement: false,
+    hasTransitionTrigger: false,
     isCurrentImageVisualReady: false,
     isEntryTransitionActive: false,
     isOpen: true,
@@ -25,7 +25,7 @@ test('resolvePhotoViewerEntryState mounts the heavy image stage immediately when
 
 test('resolvePhotoViewerEntryState keeps the lightweight catch-up layer hidden before the viewer stage is ready to hand off', () => {
   const state = resolvePhotoViewerEntryState({
-    hasTriggerElement: true,
+    hasTransitionTrigger: true,
     isCurrentImageVisualReady: false,
     isEntryTransitionActive: true,
     isOpen: true,
@@ -40,7 +40,7 @@ test('resolvePhotoViewerEntryState keeps the lightweight catch-up layer hidden b
 
 test('resolvePhotoViewerEntryState shows the lightweight catch-up layer only during the late entry handoff while the viewer stage is visible', () => {
   const state = resolvePhotoViewerEntryState({
-    hasTriggerElement: true,
+    hasTransitionTrigger: true,
     isCurrentImageVisualReady: false,
     isEntryTransitionActive: true,
     isOpen: true,
@@ -55,7 +55,7 @@ test('resolvePhotoViewerEntryState shows the lightweight catch-up layer only dur
 
 test('resolvePhotoViewerEntryState drops the catch-up layer once the stage is visible and the current image is ready', () => {
   const state = resolvePhotoViewerEntryState({
-    hasTriggerElement: true,
+    hasTransitionTrigger: true,
     isCurrentImageVisualReady: true,
     isEntryTransitionActive: false,
     isOpen: true,
