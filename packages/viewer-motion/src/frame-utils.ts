@@ -7,10 +7,14 @@ import type {
   ViewportRectLike,
 } from './types'
 
-const DEFAULT_VIEWER_LAYOUT: Required<ViewerFrameLayout> = {
-  desktopSidebarWidthRem: 20,
-  desktopThumbnailStripHeight: 64,
-  mobileThumbnailStripHeight: 48,
+export const DEFAULT_DESKTOP_VIEWER_MEDIA_TRANSFORM_ORIGIN = '50% 50%'
+export const DEFAULT_MOBILE_VIEWER_MEDIA_TRANSFORM_ORIGIN = '50% 18%'
+export const DEFAULT_MOBILE_VIEWER_MEDIA_ORIGIN_Y_RATIO = 0.18
+
+export const DEFAULT_VIEWER_FRAME_LAYOUT: Required<ViewerFrameLayout> = {
+  desktopSidebarWidthRem: 0,
+  desktopThumbnailStripHeight: 0,
+  mobileThumbnailStripHeight: 0,
 }
 
 const FALLBACK_VIEWPORT = {
@@ -80,7 +84,7 @@ export const computeViewerMediaFrame = (
   isMobile: boolean,
   layout: ViewerFrameLayout = {},
 ): AnimationFrameRect => {
-  const resolvedLayout = { ...DEFAULT_VIEWER_LAYOUT, ...layout }
+  const resolvedLayout = { ...DEFAULT_VIEWER_FRAME_LAYOUT, ...layout }
   const rect = getViewportRect(viewportRect)
   const baseFontSize = getRootFontSize()
   const sidebarWidth = isMobile ? 0 : resolvedLayout.desktopSidebarWidthRem * baseFontSize
@@ -113,7 +117,9 @@ export const computeViewerMediaFrame = (
     height: displayHeight,
     borderRadius: 0,
     rotate: 0,
-    transformOrigin: isMobile ? '50% 18%' : '50% 50%',
+    transformOrigin: isMobile
+      ? DEFAULT_MOBILE_VIEWER_MEDIA_TRANSFORM_ORIGIN
+      : DEFAULT_DESKTOP_VIEWER_MEDIA_TRANSFORM_ORIGIN,
   }
 }
 
@@ -123,7 +129,7 @@ export const projectViewerMediaFrame = (
   snapshot: ViewerFrameTransformSnapshot,
 ): AnimationFrameRect => {
   const originX = viewportRect.left + viewportRect.width * 0.5
-  const originY = viewportRect.top + viewportRect.height * 0.18
+  const originY = viewportRect.top + viewportRect.height * DEFAULT_MOBILE_VIEWER_MEDIA_ORIGIN_Y_RATIO
 
   return {
     left: originX + (frame.left - originX) * snapshot.scale + snapshot.translateX,

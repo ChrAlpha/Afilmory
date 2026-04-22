@@ -8,6 +8,7 @@ import { Spring } from '@afilmory/utils'
 import {
   type AnimationFrameRect,
   createInspectorSheetPresentation,
+  DEFAULT_MOBILE_VIEWER_MEDIA_TRANSFORM_ORIGIN,
   type MobileViewerDismissSnapshot,
   projectDismissedViewerMediaFrame,
   resolveInspectorSheetHeight,
@@ -46,6 +47,12 @@ interface PhotoViewerProps {
   onExitComplete?: () => void
 }
 
+const AFILMORY_VIEWER_FRAME_LAYOUT = {
+  desktopSidebarWidthRem: 20,
+  desktopThumbnailStripHeight: 64,
+  mobileThumbnailStripHeight: 48,
+} as const
+
 export const PhotoViewer = ({
   photos,
   currentIndex,
@@ -81,6 +88,7 @@ export const PhotoViewer = ({
   } = useViewerTransitions({
     exitOverrideFrame: dragDismissExitFrame,
     isOpen,
+    layout: AFILMORY_VIEWER_FRAME_LAYOUT,
     triggerElement,
     currentItem: currentPhoto
       ? {
@@ -116,6 +124,7 @@ export const PhotoViewer = ({
           width: currentPhoto.width,
           height: currentPhoto.height,
         },
+        layout: AFILMORY_VIEWER_FRAME_LAYOUT,
         viewportRect,
         snapshot,
         isMobile: true,
@@ -357,7 +366,7 @@ export const PhotoViewer = ({
                           scale: viewerScale,
                           rotate: viewerRotate,
                           borderRadius: viewerBorderRadius,
-                          transformOrigin: '50% 18%',
+                          transformOrigin: DEFAULT_MOBILE_VIEWER_MEDIA_TRANSFORM_ORIGIN,
                           touchAction: 'none',
                         }
                       : undefined

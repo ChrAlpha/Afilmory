@@ -5,7 +5,7 @@ import * as frameUtils from './frame-utils'
 
 const { computeViewerMediaFrame, projectViewerMediaFrame } = frameUtils
 
-test('computeViewerMediaFrame reserves desktop chrome and fits landscape media', () => {
+test('computeViewerMediaFrame fits landscape media inside the full viewport by default', () => {
   const frame = computeViewerMediaFrame(
     { width: 4000, height: 3000 },
     { left: 10, top: 20, width: 1000, height: 800 },
@@ -14,9 +14,9 @@ test('computeViewerMediaFrame reserves desktop chrome and fits landscape media',
 
   assert.deepEqual(frame, {
     left: 10,
-    top: 133,
-    width: 680,
-    height: 510,
+    top: 45,
+    width: 1000,
+    height: 750,
     borderRadius: 0,
     rotate: 0,
     transformOrigin: '50% 50%',
@@ -31,10 +31,32 @@ test('computeViewerMediaFrame fits portrait media inside the available height', 
   )
 
   assert.deepEqual(frame, {
-    left: 64,
+    left: 200,
     top: 0,
-    width: 552,
-    height: 736,
+    width: 600,
+    height: 800,
+    borderRadius: 0,
+    rotate: 0,
+    transformOrigin: '50% 50%',
+  })
+})
+
+test('computeViewerMediaFrame accepts explicit host chrome layout when the viewer does not occupy the full viewport', () => {
+  const frame = computeViewerMediaFrame(
+    { width: 4000, height: 3000 },
+    { left: 10, top: 20, width: 1000, height: 800 },
+    false,
+    {
+      desktopSidebarWidthRem: 20,
+      desktopThumbnailStripHeight: 64,
+    },
+  )
+
+  assert.deepEqual(frame, {
+    left: 10,
+    top: 133,
+    width: 680,
+    height: 510,
     borderRadius: 0,
     rotate: 0,
     transformOrigin: '50% 50%',
@@ -81,7 +103,7 @@ test('projectViewerMediaFrame applies scale, translation, radius, and rotation a
   assert.equal(frame.transformOrigin, '50% 18%')
 })
 
-test('projectDismissedViewerMediaFrame combines viewer frame calculation with the dismiss snapshot projection', () => {
+test('projectDismissedViewerMediaFrame combines the default viewer frame calculation with the dismiss snapshot projection', () => {
   assert.equal(typeof frameUtils.projectDismissedViewerMediaFrame, 'function')
 
   const frame = frameUtils.projectDismissedViewerMediaFrame({
@@ -97,10 +119,10 @@ test('projectDismissedViewerMediaFrame combines viewer frame calculation with th
     isMobile: true,
   })
 
-  assert.equal(frame.left, 286.2)
+  assert.equal(frame.left, 270)
   assert.equal(frame.top, 94.4)
-  assert.equal(frame.width, 507.6)
-  assert.equal(Number(frame.height.toFixed(1)), 676.8)
+  assert.equal(frame.width, 540)
+  assert.equal(Number(frame.height.toFixed(1)), 720)
   assert.equal(frame.borderRadius, 14)
   assert.equal(frame.rotate, 3)
   assert.equal(frame.transformOrigin, '50% 18%')
